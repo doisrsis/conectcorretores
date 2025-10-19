@@ -1,0 +1,234 @@
+<?php $this->load->view('templates/dashboard_header'); ?>
+
+<?php $this->load->view('templates/sidebar'); ?>
+
+<!-- Main Content -->
+<div class="lg:pl-64 min-h-screen flex flex-col">
+    <!-- Top Bar -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div class="flex items-center justify-between px-4 py-4">
+            <!-- Menu Button (Mobile) -->
+            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            
+            <h1 class="text-xl font-semibold text-gray-900">Dashboard</h1>
+            
+            <div class="w-6"></div>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 p-4 lg:p-8">
+        <div class="max-w-7xl mx-auto space-y-6">
+            
+            <!-- Mensagens de Feedback -->
+            <?php if ($this->session->flashdata('success')): ?>
+                <div class="alert-success">
+                    <?php echo $this->session->flashdata('success'); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($this->session->flashdata('error')): ?>
+                <div class="alert-error">
+                    <?php echo $this->session->flashdata('error'); ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Welcome -->
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900">
+                    Olá, <?php echo $user->nome; ?>! 👋
+                </h2>
+                <p class="text-gray-600 mt-1">
+                    Bem-vindo ao seu painel de controle
+                </p>
+            </div>
+
+            <!-- Status da Assinatura -->
+            <?php if ($subscription): ?>
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-green-700 font-medium">Plano Ativo</p>
+                            <p class="text-2xl font-bold text-green-900 mt-1">
+                                <?php echo $subscription->plan_nome; ?>
+                            </p>
+                            <p class="text-sm text-green-600 mt-2">
+                                Válido até <?php echo date('d/m/Y', strtotime($subscription->data_fim)); ?>
+                            </p>
+                        </div>
+                        <div class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            <?php echo ucfirst($subscription->status); ?>
+                        </div>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-yellow-700 font-medium">Sem Plano Ativo</p>
+                            <p class="text-lg text-yellow-900 mt-1">
+                                Assine um plano para aproveitar todos os recursos
+                            </p>
+                        </div>
+                        <a href="<?php echo base_url('planos'); ?>" class="btn-primary">
+                            Ver Planos
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Stats Cards -->
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Total de Imóveis -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total de Imóveis</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2">
+                                <?php echo $stats->total_imoveis; ?>
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Para Venda -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Para Venda</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2">
+                                <?php echo $stats->imoveis_venda; ?>
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Para Aluguel -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Para Aluguel</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2">
+                                <?php echo $stats->imoveis_aluguel; ?>
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ações Rápidas -->
+            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">
+                    Ações Rápidas
+                </h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <a href="<?php echo base_url('imoveis/novo'); ?>" 
+                       class="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all">
+                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Cadastrar Imóvel</p>
+                            <p class="text-sm text-gray-600">Adicione um novo imóvel</p>
+                        </div>
+                    </a>
+
+                    <a href="<?php echo base_url('imoveis'); ?>" 
+                       class="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Ver Todos os Imóveis</p>
+                            <p class="text-sm text-gray-600">Gerencie seu portfólio</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Imóveis Recentes -->
+            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">
+                        Imóveis Recentes
+                    </h3>
+                    <a href="<?php echo base_url('imoveis'); ?>" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                        Ver todos →
+                    </a>
+                </div>
+
+                <?php if (!empty($recent_imoveis)): ?>
+                    <div class="space-y-3">
+                        <?php foreach ($recent_imoveis as $imovel): ?>
+                            <div class="p-4 border border-gray-200 rounded-lg hover:border-primary-500 hover:shadow-md transition-all">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $imovel->tipo_negocio === 'compra' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'; ?>">
+                                                <?php echo ucfirst($imovel->tipo_negocio); ?>
+                                            </span>
+                                            <span class="text-sm text-gray-600"><?php echo $imovel->tipo_imovel; ?></span>
+                                        </div>
+                                        <p class="font-medium text-gray-900">
+                                            <?php echo $imovel->cidade; ?> - <?php echo $imovel->estado; ?>
+                                        </p>
+                                        <p class="text-sm text-gray-600">
+                                            <?php echo $imovel->quartos; ?> quartos • <?php echo $imovel->vagas; ?> vagas • <?php echo number_format($imovel->area_privativa, 0, ',', '.'); ?>m²
+                                        </p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-lg font-bold text-primary-600">
+                                            R$ <?php echo number_format($imovel->preco, 2, ',', '.'); ?>
+                                        </p>
+                                        <p class="text-xs text-gray-500">
+                                            R$ <?php echo number_format($imovel->valor_m2, 2, ',', '.'); ?>/m²
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="text-center py-12">
+                        <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <p class="text-gray-600 mb-4">Nenhum imóvel cadastrado ainda</p>
+                        <a href="<?php echo base_url('imoveis/novo'); ?>" class="btn-primary">
+                            Cadastrar Primeiro Imóvel
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+        </div>
+    </main>
+
+    <?php $this->load->view('templates/footer'); ?>
+</div>
+
+</body>
+</html>

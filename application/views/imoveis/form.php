@@ -1,0 +1,248 @@
+<?php $this->load->view('templates/dashboard_header'); ?>
+
+<?php $this->load->view('templates/sidebar'); ?>
+
+<!-- Main Content -->
+<div class="lg:pl-64 min-h-screen flex flex-col">
+    <!-- Top Bar -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div class="flex items-center justify-between px-4 py-4">
+            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            
+            <h1 class="text-xl font-semibold text-gray-900">
+                <?php echo isset($imovel) ? 'Editar Imóvel' : 'Cadastrar Imóvel'; ?>
+            </h1>
+            
+            <a href="<?php echo base_url('imoveis'); ?>" class="text-gray-600 hover:text-gray-900">
+                ← Voltar
+            </a>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 p-4 lg:p-8">
+        <div class="max-w-4xl mx-auto">
+            
+            <!-- Mensagens -->
+            <?php if ($this->session->flashdata('error')): ?>
+                <div class="alert-error mb-6">
+                    <?php echo $this->session->flashdata('error'); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (validation_errors()): ?>
+                <div class="alert-error mb-6">
+                    <?php echo validation_errors(); ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Formulário -->
+            <div class="bg-white rounded-xl shadow-lg p-6 lg:p-8 border border-gray-100">
+                <?php echo form_open(isset($imovel) ? 'imoveis/editar/' . $imovel->id : 'imoveis/novo', ['class' => 'space-y-6']); ?>
+                
+                    <!-- Tipo de Negócio e Tipo de Imóvel -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                Tipo de Negócio *
+                            </label>
+                            <select name="tipo_negocio" class="input" required>
+                                <option value="">Selecione...</option>
+                                <option value="compra" <?php echo set_select('tipo_negocio', 'compra', isset($imovel) && $imovel->tipo_negocio === 'compra'); ?>>Venda</option>
+                                <option value="aluguel" <?php echo set_select('tipo_negocio', 'aluguel', isset($imovel) && $imovel->tipo_negocio === 'aluguel'); ?>>Aluguel</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                Tipo de Imóvel *
+                            </label>
+                            <input type="text" name="tipo_imovel" 
+                                   value="<?php echo set_value('tipo_imovel', isset($imovel) ? $imovel->tipo_imovel : ''); ?>" 
+                                   class="input" placeholder="Ex: Apartamento, Casa, Terreno" required>
+                        </div>
+                    </div>
+
+                    <!-- Preço -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Preço (R$) *
+                        </label>
+                        <input type="number" name="preco" step="0.01" 
+                               value="<?php echo set_value('preco', isset($imovel) ? $imovel->preco : ''); ?>" 
+                               class="input" placeholder="250000.00" required>
+                    </div>
+
+                    <!-- Endereço -->
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Localização</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Endereço *
+                                </label>
+                                <input type="text" name="endereco" 
+                                       value="<?php echo set_value('endereco', isset($imovel) ? $imovel->endereco : ''); ?>" 
+                                       class="input" placeholder="Rua, Avenida..." required>
+                            </div>
+
+                            <div class="grid md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Número
+                                    </label>
+                                    <input type="text" name="numero" 
+                                           value="<?php echo set_value('numero', isset($imovel) ? $imovel->numero : ''); ?>" 
+                                           class="input" placeholder="123">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Complemento
+                                    </label>
+                                    <input type="text" name="complemento" 
+                                           value="<?php echo set_value('complemento', isset($imovel) ? $imovel->complemento : ''); ?>" 
+                                           class="input" placeholder="Apto 101, Bloco A">
+                                </div>
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Bairro *
+                                    </label>
+                                    <input type="text" name="bairro" 
+                                           value="<?php echo set_value('bairro', isset($imovel) ? $imovel->bairro : ''); ?>" 
+                                           class="input" placeholder="Centro" required>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        CEP
+                                    </label>
+                                    <input type="text" name="cep" 
+                                           value="<?php echo set_value('cep', isset($imovel) ? $imovel->cep : ''); ?>" 
+                                           class="input" placeholder="12345-678">
+                                </div>
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Cidade *
+                                    </label>
+                                    <input type="text" name="cidade" 
+                                           value="<?php echo set_value('cidade', isset($imovel) ? $imovel->cidade : ''); ?>" 
+                                           class="input" placeholder="São Paulo" required>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Estado (UF) *
+                                    </label>
+                                    <input type="text" name="estado" maxlength="2" 
+                                           value="<?php echo set_value('estado', isset($imovel) ? $imovel->estado : ''); ?>" 
+                                           class="input" placeholder="SP" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Características -->
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Características</h3>
+                        
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Área Privativa (m²) *
+                                </label>
+                                <input type="number" name="area_privativa" step="0.01" 
+                                       value="<?php echo set_value('area_privativa', isset($imovel) ? $imovel->area_privativa : ''); ?>" 
+                                       class="input" placeholder="85.50" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Área Total (m²)
+                                </label>
+                                <input type="number" name="area_total" step="0.01" 
+                                       value="<?php echo set_value('area_total', isset($imovel) ? $imovel->area_total : ''); ?>" 
+                                       class="input" placeholder="120.00">
+                            </div>
+                        </div>
+
+                        <div class="grid md:grid-cols-4 gap-4 mt-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Quartos *
+                                </label>
+                                <input type="number" name="quartos" min="0" 
+                                       value="<?php echo set_value('quartos', isset($imovel) ? $imovel->quartos : ''); ?>" 
+                                       class="input" placeholder="3" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Suítes
+                                </label>
+                                <input type="number" name="suites" min="0" 
+                                       value="<?php echo set_value('suites', isset($imovel) ? $imovel->suites : ''); ?>" 
+                                       class="input" placeholder="1">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Banheiros *
+                                </label>
+                                <input type="number" name="banheiros" min="0" 
+                                       value="<?php echo set_value('banheiros', isset($imovel) ? $imovel->banheiros : ''); ?>" 
+                                       class="input" placeholder="2" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Vagas *
+                                </label>
+                                <input type="number" name="vagas" min="0" 
+                                       value="<?php echo set_value('vagas', isset($imovel) ? $imovel->vagas : ''); ?>" 
+                                       class="input" placeholder="2" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="border-t pt-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Descrição
+                        </label>
+                        <textarea name="descricao" rows="5" class="input" 
+                                  placeholder="Descreva o imóvel, suas características, diferenciais..."><?php echo set_value('descricao', isset($imovel) ? $imovel->descricao : ''); ?></textarea>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="flex gap-4 pt-6 border-t">
+                        <a href="<?php echo base_url('imoveis'); ?>" class="btn-secondary flex-1 text-center">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn-primary flex-1">
+                            <?php echo isset($imovel) ? 'Atualizar Imóvel' : 'Cadastrar Imóvel'; ?>
+                        </button>
+                    </div>
+
+                <?php echo form_close(); ?>
+            </div>
+
+        </div>
+    </main>
+
+    <?php $this->load->view('templates/footer'); ?>
+</div>
+
+</body>
+</html>
