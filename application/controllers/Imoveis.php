@@ -3,9 +3,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Controller Imóveis - ConectCorretores
- * 
+ *
  * CRUD completo de imóveis
- * 
+ *
  * @author Rafael Dias - doisr.com.br
  * @date 18/10/2025
  */
@@ -13,7 +13,7 @@ class Imoveis extends CI_Controller {
 
     public function __construct() {
         parent::__construct();
-        
+
         // Verificar se está logado
         if (!$this->session->userdata('logged_in')) {
             $this->session->set_flashdata('error', 'Você precisa fazer login para acessar esta página.');
@@ -23,6 +23,8 @@ class Imoveis extends CI_Controller {
         // Carregar models
         $this->load->model('Imovel_model');
         $this->load->model('User_model');
+        $this->load->model('Estado_model');
+        $this->load->model('Cidade_model');
     }
 
     /**
@@ -31,51 +33,51 @@ class Imoveis extends CI_Controller {
     public function index() {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
-        
+
         // Paginação
         $per_page = 12;
         $offset = $this->input->get('offset') ? (int)$this->input->get('offset') : 0;
-        
+
         // Filtros
         $filters = [];
-        
+
         // Admin vê todos, corretor vê apenas seus
         if ($role !== 'admin') {
             $filters['user_id'] = $user_id;
         }
-        
+
         if ($this->input->get('tipo_negocio')) {
             $filters['tipo_negocio'] = $this->input->get('tipo_negocio');
         }
-        
+
         if ($this->input->get('tipo_imovel')) {
             $filters['tipo_imovel'] = $this->input->get('tipo_imovel');
         }
-        
+
         if ($this->input->get('cidade')) {
             $filters['cidade'] = $this->input->get('cidade');
         }
-        
+
         if ($this->input->get('search')) {
             $filters['search'] = $this->input->get('search');
         }
-        
+
         // Buscar imóveis
         $data['imoveis'] = $this->Imovel_model->get_all($filters, $per_page, $offset);
         $data['total'] = $this->Imovel_model->count_all($filters);
-        
+
         // Paginação
         $data['per_page'] = $per_page;
         $data['offset'] = $offset;
-        
+
         // Filtros para o formulário
         $data['tipos_imoveis'] = $this->Imovel_model->get_tipos_imoveis();
         $data['estados'] = $this->Imovel_model->get_estados();
-        
+
         // Título
         $data['title'] = 'Meus Imóveis - ConectCorretores';
         $data['page'] = 'imoveis';
-        
+
         $this->load->view('imoveis/index', $data);
     }
 
@@ -85,19 +87,19 @@ class Imoveis extends CI_Controller {
     public function ver($id) {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
-        
+
         // Admin pode ver todos, corretor apenas seus
         $imovel = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
-        
+
         if (!$imovel) {
             $this->session->set_flashdata('error', 'Imóvel não encontrado.');
             redirect('imoveis');
         }
-        
+
         $data['imovel'] = $imovel;
         $data['title'] = 'Detalhes do Imóvel - ConectCorretores';
         $data['page'] = 'imoveis';
-        
+
         $this->load->view('imoveis/ver', $data);
     }
 
@@ -110,33 +112,42 @@ class Imoveis extends CI_Controller {
             $this->_process_criar();
             return;
         }
-        
+
         // Mostrar formulário
         $data['title'] = 'Cadastrar Imóvel - ConectCorretores';
         $data['page'] = 'imoveis';
         // Não passar $data['imovel'] para indicar que é criação
-        
+
         $this->load->view('imoveis/form', $data);
     }
+
 
     /**
      * Processar criação de imóvel
      */
     private function _process_criar() {
+        // Limpar formatação do preço e área
+        $preco = $this->input->post('preco');
+        $_POST['preco'] = str_replace(['R$', '.', ',', ' '], ['', '', '.', ''], $preco);
+        
+        $area = $this->input->post('area_privativa');
+        $area_limpa = str_replace(['.', ','], ['', ''], $area);
+        $_POST['area_privativa'] = (int)$area_limpa; // Converte para inteiro
+        
         // Validações
-        $this->form_validation->set_rules('tipo_imovel', 'Tipo de Imóvel', 'required|trim');
         $this->form_validation->set_rules('tipo_negocio', 'Tipo de Negócio', 'required|in_list[compra,aluguel]');
-        $this->form_validation->set_rules('preco', 'Preço', 'required|numeric');
-        $this->form_validation->set_rules('endereco', 'Endereço', 'required|trim');
-        $this->form_validation->set_rules('bairro', 'Bairro', 'required|trim');
-        $this->form_validation->set_rules('cidade', 'Cidade', 'required|trim');
-        $this->form_validation->set_rules('estado', 'Estado', 'required|exact_length[2]|trim');
+        $this->form_validation->set_rules('tipo_imovel', 'Tipo de Imóvel', 'required|trim');
         $this->form_validation->set_rules('cep', 'CEP', 'trim');
+        $this->form_validation->set_rules('estado_id', 'Estado', 'required|integer');
+        $this->form_validation->set_rules('cidade_id', 'Cidade', 'required|integer');
+        $this->form_validation->set_rules('bairro', 'Bairro', 'required|trim');
+        $this->form_validation->set_rules('quartos', 'Quartos', 'integer');
+        $this->form_validation->set_rules('vagas', 'Vagas', 'integer');
+        $this->form_validation->set_rules('preco', 'Preço', 'required|decimal');
         $this->form_validation->set_rules('area_privativa', 'Área Privativa', 'required|numeric');
-        $this->form_validation->set_rules('quartos', 'Quartos', 'required|integer');
-        $this->form_validation->set_rules('banheiros', 'Banheiros', 'required|integer');
-        $this->form_validation->set_rules('vagas', 'Vagas', 'required|integer');
-        $this->form_validation->set_rules('descricao', 'Descrição', 'trim');
+        $this->form_validation->set_rules('link', 'Link', 'trim|valid_url');
+        $this->form_validation->set_rules('telefone', 'Telefone', 'trim');
+        $this->form_validation->set_rules('whatsapp', 'WhatsApp', 'trim');
 
         if ($this->form_validation->run() === FALSE) {
             $data['title'] = 'Cadastrar Imóvel - ConectCorretores';
@@ -148,23 +159,19 @@ class Imoveis extends CI_Controller {
         // Preparar dados
         $imovel_data = [
             'user_id' => $this->session->userdata('user_id'),
-            'tipo_imovel' => $this->input->post('tipo_imovel'),
             'tipo_negocio' => $this->input->post('tipo_negocio'),
-            'preco' => $this->input->post('preco'),
-            'endereco' => $this->input->post('endereco'),
-            'numero' => $this->input->post('numero'),
-            'complemento' => $this->input->post('complemento'),
-            'bairro' => $this->input->post('bairro'),
-            'cidade' => $this->input->post('cidade'),
-            'estado' => strtoupper($this->input->post('estado')),
+            'tipo_imovel' => $this->input->post('tipo_imovel'),
             'cep' => $this->input->post('cep'),
+            'estado_id' => $this->input->post('estado_id'),
+            'cidade_id' => $this->input->post('cidade_id'),
+            'bairro' => $this->input->post('bairro'),
+            'quartos' => $this->input->post('quartos') ? $this->input->post('quartos') : null,
+            'vagas' => $this->input->post('vagas') ? $this->input->post('vagas') : null,
+            'preco' => $this->input->post('preco'),
             'area_privativa' => $this->input->post('area_privativa'),
-            'area_total' => $this->input->post('area_total'),
-            'quartos' => $this->input->post('quartos'),
-            'suites' => $this->input->post('suites'),
-            'banheiros' => $this->input->post('banheiros'),
-            'vagas' => $this->input->post('vagas'),
-            'descricao' => $this->input->post('descricao'),
+            'link' => $this->input->post('link'),
+            'telefone' => $this->input->post('telefone'),
+            'whatsapp' => $this->input->post('whatsapp'),
             'ativo' => 1,
         ];
 
@@ -186,26 +193,26 @@ class Imoveis extends CI_Controller {
     public function editar($id) {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
-        
+
         // Admin pode editar todos, corretor apenas seus
         $imovel = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
-        
+
         if (!$imovel) {
             $this->session->set_flashdata('error', 'Imóvel não encontrado.');
             redirect('imoveis');
         }
-        
+
         // Processar formulário
         if ($this->input->post()) {
             $this->_process_editar($id);
             return;
         }
-        
+
         // Mostrar formulário
         $data['imovel'] = $imovel;
         $data['title'] = 'Editar Imóvel - ConectCorretores';
         $data['page'] = 'imoveis';
-        
+
         $this->load->view('imoveis/form', $data);
     }
 
@@ -215,19 +222,29 @@ class Imoveis extends CI_Controller {
     private function _process_editar($id) {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
+
+        // Limpar formatação do preço e área
+        $preco = $this->input->post('preco');
+        $_POST['preco'] = str_replace(['R$', '.', ',', ' '], ['', '', '.', ''], $preco);
         
+        $area = $this->input->post('area_privativa');
+        $area_limpa = str_replace(['.', ','], ['', ''], $area);
+        $_POST['area_privativa'] = (int)$area_limpa; // Converte para inteiro
+
         // Validações (mesmas do criar)
-        $this->form_validation->set_rules('tipo_imovel', 'Tipo de Imóvel', 'required|trim');
         $this->form_validation->set_rules('tipo_negocio', 'Tipo de Negócio', 'required|in_list[compra,aluguel]');
-        $this->form_validation->set_rules('preco', 'Preço', 'required|numeric');
-        $this->form_validation->set_rules('endereco', 'Endereço', 'required|trim');
+        $this->form_validation->set_rules('tipo_imovel', 'Tipo de Imóvel', 'required|trim');
+        $this->form_validation->set_rules('cep', 'CEP', 'trim');
+        $this->form_validation->set_rules('estado_id', 'Estado', 'required|integer');
+        $this->form_validation->set_rules('cidade_id', 'Cidade', 'required|integer');
         $this->form_validation->set_rules('bairro', 'Bairro', 'required|trim');
-        $this->form_validation->set_rules('cidade', 'Cidade', 'required|trim');
-        $this->form_validation->set_rules('estado', 'Estado', 'required|exact_length[2]|trim');
+        $this->form_validation->set_rules('quartos', 'Quartos', 'integer');
+        $this->form_validation->set_rules('vagas', 'Vagas', 'integer');
+        $this->form_validation->set_rules('preco', 'Preço', 'required|decimal');
         $this->form_validation->set_rules('area_privativa', 'Área Privativa', 'required|numeric');
-        $this->form_validation->set_rules('quartos', 'Quartos', 'required|integer');
-        $this->form_validation->set_rules('banheiros', 'Banheiros', 'required|integer');
-        $this->form_validation->set_rules('vagas', 'Vagas', 'required|integer');
+        $this->form_validation->set_rules('link', 'Link', 'trim|valid_url');
+        $this->form_validation->set_rules('telefone', 'Telefone', 'trim');
+        $this->form_validation->set_rules('whatsapp', 'WhatsApp', 'trim');
 
         if ($this->form_validation->run() === FALSE) {
             $data['imovel'] = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
@@ -239,23 +256,19 @@ class Imoveis extends CI_Controller {
 
         // Preparar dados
         $update_data = [
-            'tipo_imovel' => $this->input->post('tipo_imovel'),
             'tipo_negocio' => $this->input->post('tipo_negocio'),
-            'preco' => $this->input->post('preco'),
-            'endereco' => $this->input->post('endereco'),
-            'numero' => $this->input->post('numero'),
-            'complemento' => $this->input->post('complemento'),
-            'bairro' => $this->input->post('bairro'),
-            'cidade' => $this->input->post('cidade'),
-            'estado' => strtoupper($this->input->post('estado')),
+            'tipo_imovel' => $this->input->post('tipo_imovel'),
             'cep' => $this->input->post('cep'),
+            'estado_id' => $this->input->post('estado_id'),
+            'cidade_id' => $this->input->post('cidade_id'),
+            'bairro' => $this->input->post('bairro'),
+            'quartos' => $this->input->post('quartos') ? $this->input->post('quartos') : null,
+            'vagas' => $this->input->post('vagas') ? $this->input->post('vagas') : null,
+            'preco' => $this->input->post('preco'),
             'area_privativa' => $this->input->post('area_privativa'),
-            'area_total' => $this->input->post('area_total'),
-            'quartos' => $this->input->post('quartos'),
-            'suites' => $this->input->post('suites'),
-            'banheiros' => $this->input->post('banheiros'),
-            'vagas' => $this->input->post('vagas'),
-            'descricao' => $this->input->post('descricao'),
+            'link' => $this->input->post('link'),
+            'telefone' => $this->input->post('telefone'),
+            'whatsapp' => $this->input->post('whatsapp'),
         ];
 
         // Atualizar
@@ -274,13 +287,13 @@ class Imoveis extends CI_Controller {
     public function deletar($id) {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
-        
+
         if ($this->Imovel_model->delete($id, $role === 'admin' ? null : $user_id)) {
             $this->session->set_flashdata('success', 'Imóvel deletado com sucesso!');
         } else {
             $this->session->set_flashdata('error', 'Erro ao deletar imóvel.');
         }
-        
+
         redirect('imoveis');
     }
 
@@ -290,22 +303,22 @@ class Imoveis extends CI_Controller {
     public function toggle_status($id) {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
-        
+
         $imovel = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
-        
+
         if (!$imovel) {
             $this->session->set_flashdata('error', 'Imóvel não encontrado.');
             redirect('imoveis');
         }
-        
+
         $novo_status = $imovel->ativo ? 0 : 1;
-        
+
         if ($this->Imovel_model->toggle_status($id, $novo_status, $role === 'admin' ? null : $user_id)) {
             $this->session->set_flashdata('success', 'Status atualizado com sucesso!');
         } else {
             $this->session->set_flashdata('error', 'Erro ao atualizar status.');
         }
-        
+
         redirect('imoveis');
     }
 
@@ -315,22 +328,138 @@ class Imoveis extends CI_Controller {
     public function toggle_destaque($id) {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
-        
+
         $imovel = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
-        
+
         if (!$imovel) {
             $this->session->set_flashdata('error', 'Imóvel não encontrado.');
             redirect('imoveis');
         }
-        
+
         $novo_destaque = $imovel->destaque ? 0 : 1;
-        
+
         if ($this->Imovel_model->toggle_destaque($id, $novo_destaque, $role === 'admin' ? null : $user_id)) {
             $this->session->set_flashdata('success', 'Destaque atualizado com sucesso!');
         } else {
             $this->session->set_flashdata('error', 'Erro ao atualizar destaque.');
         }
-        
+
         redirect('imoveis');
+    }
+
+    /**
+     * Buscar CEP via ViaCEP (AJAX)
+     */
+    public function buscar_cep() {
+        // Verificar se é requisição AJAX
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $cep = $this->input->post('cep');
+
+        if (!$cep) {
+            echo json_encode(['success' => false, 'message' => 'CEP não informado']);
+            return;
+        }
+
+        // Limpar CEP
+        $cep = preg_replace('/[^0-9]/', '', $cep);
+
+        if (strlen($cep) !== 8) {
+            echo json_encode(['success' => false, 'message' => 'CEP inválido']);
+            return;
+        }
+
+        // Consultar ViaCEP
+        $url = "https://viacep.com.br/ws/{$cep}/json/";
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($http_code !== 200) {
+            echo json_encode(['success' => false, 'message' => 'Erro ao consultar CEP']);
+            return;
+        }
+
+        $data = json_decode($response, true);
+
+        if (isset($data['erro']) && $data['erro'] === true) {
+            echo json_encode(['success' => false, 'message' => 'CEP não encontrado']);
+            return;
+        }
+
+        // Buscar ou criar estado
+        $estado = $this->Estado_model->get_by_uf($data['uf']);
+
+        if (!$estado) {
+            echo json_encode(['success' => false, 'message' => 'Estado não encontrado']);
+            return;
+        }
+
+        // Buscar ou criar cidade
+        $cidade_id = $this->Cidade_model->get_or_create(
+            $estado->id,
+            $data['localidade'],
+            $data['ibge'] ?? null
+        );
+
+        // Retornar dados
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'cep' => $data['cep'],
+                'estado_id' => $estado->id,
+                'estado_uf' => $estado->uf,
+                'estado_nome' => $estado->nome,
+                'cidade_id' => $cidade_id,
+                'cidade_nome' => $data['localidade'],
+                'bairro' => $data['bairro'] ?? ''
+            ]
+        ]);
+    }
+
+    /**
+     * Buscar cidades por estado (AJAX)
+     */
+    public function get_cidades() {
+        // Verificar se é requisição AJAX
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $estado_id = $this->input->post('estado_id');
+
+        if (!$estado_id) {
+            echo json_encode(['success' => false, 'message' => 'Estado não informado']);
+            return;
+        }
+
+        $cidades = $this->Cidade_model->get_by_estado($estado_id);
+
+        echo json_encode([
+            'success' => true,
+            'cidades' => $cidades
+        ]);
+    }
+
+    /**
+     * Buscar todos os estados (AJAX)
+     */
+    public function get_estados() {
+        // Verificar se é requisição AJAX
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $estados = $this->Estado_model->get_all();
+
+        echo json_encode([
+            'success' => true,
+            'estados' => $estados
+        ]);
     }
 }

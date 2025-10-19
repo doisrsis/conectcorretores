@@ -86,6 +86,25 @@
         .alert-info {
             @apply alert bg-blue-50 text-blue-800 border border-blue-200;
         }
+        
+        .alert-warning {
+            @apply alert bg-yellow-50 text-yellow-800 border border-yellow-200;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 antialiased">

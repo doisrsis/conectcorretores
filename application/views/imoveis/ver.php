@@ -67,10 +67,10 @@
 
                         <!-- Localização -->
                         <h2 class="text-2xl font-bold text-gray-900 mb-2">
-                            <?php echo $imovel->endereco; ?><?php echo $imovel->numero ? ', ' . $imovel->numero : ''; ?>
+                            <?php echo $imovel->tipo_imovel; ?> em <?php echo $imovel->bairro; ?>
                         </h2>
                         <p class="text-gray-600">
-                            <?php echo $imovel->bairro; ?> - <?php echo $imovel->cidade; ?>/<?php echo $imovel->estado; ?>
+                            📍 <?php echo $imovel->bairro; ?> - <?php echo $imovel->cidade; ?>/<?php echo $imovel->estado; ?>
                             <?php if ($imovel->cep): ?>
                                 - CEP: <?php echo $imovel->cep; ?>
                             <?php endif; ?>
@@ -109,28 +109,20 @@
                             <span class="text-2xl">📐</span>
                         </div>
                         <p class="text-sm text-gray-600">Área Privativa</p>
-                        <p class="text-xl font-bold text-gray-900"><?php echo number_format($imovel->area_privativa, 2, ',', '.'); ?>m²</p>
+                        <p class="text-xl font-bold text-gray-900"><?php echo number_format($imovel->area_privativa, 0, ',', '.'); ?>m²</p>
                     </div>
 
+                    <?php if ($imovel->quartos): ?>
                     <div class="text-center p-4 bg-gray-50 rounded-lg">
                         <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                             <span class="text-2xl">🛏️</span>
                         </div>
                         <p class="text-sm text-gray-600">Quartos</p>
                         <p class="text-xl font-bold text-gray-900"><?php echo $imovel->quartos; ?></p>
-                        <?php if ($imovel->suites > 0): ?>
-                            <p class="text-xs text-gray-500">(<?php echo $imovel->suites; ?> suíte<?php echo $imovel->suites > 1 ? 's' : ''; ?>)</p>
-                        <?php endif; ?>
                     </div>
+                    <?php endif; ?>
 
-                    <div class="text-center p-4 bg-gray-50 rounded-lg">
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <span class="text-2xl">🚿</span>
-                        </div>
-                        <p class="text-sm text-gray-600">Banheiros</p>
-                        <p class="text-xl font-bold text-gray-900"><?php echo $imovel->banheiros; ?></p>
-                    </div>
-
+                    <?php if ($imovel->vagas): ?>
                     <div class="text-center p-4 bg-gray-50 rounded-lg">
                         <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
                             <span class="text-2xl">🚗</span>
@@ -138,27 +130,8 @@
                         <p class="text-sm text-gray-600">Vagas</p>
                         <p class="text-xl font-bold text-gray-900"><?php echo $imovel->vagas; ?></p>
                     </div>
+                    <?php endif; ?>
                 </div>
-
-                <!-- Área Total -->
-                <?php if ($imovel->area_total): ?>
-                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                        <p class="text-sm text-gray-600">Área Total</p>
-                        <p class="text-lg font-semibold text-gray-900">
-                            <?php echo number_format($imovel->area_total, 2, ',', '.'); ?>m²
-                        </p>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Descrição -->
-                <?php if ($imovel->descricao): ?>
-                    <div class="border-t pt-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Descrição</h3>
-                        <p class="text-gray-700 whitespace-pre-line leading-relaxed">
-                            <?php echo nl2br(htmlspecialchars($imovel->descricao)); ?>
-                        </p>
-                    </div>
-                <?php endif; ?>
 
                 <!-- Informações do Corretor -->
                 <div class="border-t pt-6 mt-6">
