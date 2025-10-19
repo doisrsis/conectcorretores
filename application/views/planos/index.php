@@ -161,10 +161,11 @@
                                     Cancele sua assinatura primeiro
                                 </button>
                             <?php else: ?>
-                                <a href="<?php echo base_url('planos/escolher/' . $plan->id); ?>" 
-                                   class="block w-full text-center <?php echo $plan->nome === 'Profissional' ? 'btn-primary' : 'btn-outline'; ?>">
+                                <button onclick="iniciarCheckout(<?php echo $plan->id; ?>)" 
+                                        data-plan-id="<?php echo $plan->id; ?>"
+                                        class="w-full <?php echo $plan->nome === 'Profissional' ? 'btn-primary' : 'btn-outline'; ?> btn-checkout">
                                     Assinar Agora
-                                </a>
+                                </button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -200,6 +201,60 @@
 
     <?php $this->load->view('templates/footer'); ?>
 </div>
+
+<!-- Stripe.js -->
+<script src="https://js.stripe.com/v3/"></script>
+
+<!-- Script de Checkout -->
+<parameter name="CodeContent"><script>
+// Inicializar Stripe
+const stripe = Stripe('<?php echo $this->config->item('stripe_public_key'); ?>');
+const baseUrl = '<?php echo base_url(); ?>';
+
+// Função para iniciar checkout
+async function iniciarCheckout(planId) {
+    const button = document.querySelector(`[data-plan-id="${planId}"]`);
+    
+    // Desabilitar botão e mostrar loading
+    button.disabled = true;
+    button.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processando...';
+    
+    try {
+        // Criar sessão de checkout
+        const response = await fetch(baseUrl + 'planos/criar_checkout_session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `plan_id=${planId}`
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Redirecionar para checkout do Stripe
+            const result = await stripe.redirectToCheckout({
+                sessionId: data.session_id
+            });
+            
+            if (result.error) {
+                alert('Erro: ' + result.error.message);
+                button.disabled = false;
+                button.innerHTML = 'Assinar Agora';
+            }
+        } else {
+            alert('Erro: ' + data.error);
+            button.disabled = false;
+            button.innerHTML = 'Assinar Agora';
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao processar pagamento. Tente novamente.');
+        button.disabled = false;
+        button.innerHTML = 'Assinar Agora';
+    }
+}
+</script>
 
 </body>
 </html>

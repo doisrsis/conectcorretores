@@ -3,9 +3,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Controller Planos - ConectCorretores
- * 
+ *
  * Página de planos e checkout
- * 
+ *
  * @author Rafael Dias - doisr.com.br
  * @date 18/10/2025
  */
@@ -15,6 +15,8 @@ class Planos extends CI_Controller {
         parent::__construct();
         $this->load->model('Plan_model');
         $this->load->model('Subscription_model');
+        $this->load->model('User_model');
+        $this->load->library('stripe_lib');
     }
 
     /**
@@ -23,7 +25,7 @@ class Planos extends CI_Controller {
     public function index() {
         // Buscar planos ativos
         $data['plans'] = $this->Plan_model->get_all(true);
-        
+
         // Se estiver logado, buscar assinatura atual
         if ($this->session->userdata('logged_in')) {
             $user_id = $this->session->userdata('user_id');
@@ -31,10 +33,10 @@ class Planos extends CI_Controller {
         } else {
             $data['current_subscription'] = null;
         }
-        
+
         $data['title'] = 'Planos - ConectCorretores';
         $data['page'] = 'planos';
-        
+
         // Se estiver logado, carregar com sidebar
         if ($this->session->userdata('logged_in')) {
             $this->load->view('planos/index', $data);
@@ -57,7 +59,7 @@ class Planos extends CI_Controller {
 
         // Verificar se plano existe
         $plan = $this->Plan_model->get_by_id($plan_id);
-        
+
         if (!$plan || !$plan->ativo) {
             $this->session->set_flashdata('error', 'Plano não encontrado ou inativo.');
             redirect('planos');
@@ -66,7 +68,7 @@ class Planos extends CI_Controller {
         // Verificar se já tem assinatura ativa
         $user_id = $this->session->userdata('user_id');
         $current_subscription = $this->Subscription_model->get_active_by_user($user_id);
-        
+
         if ($current_subscription) {
             $this->session->set_flashdata('error', 'Você já possui uma assinatura ativa. Cancele-a antes de assinar um novo plano.');
             redirect('dashboard');
@@ -87,7 +89,7 @@ class Planos extends CI_Controller {
 
         $user_id = $this->session->userdata('user_id');
         $subscription = $this->Subscription_model->get_active_by_user($user_id);
-        
+
         if (!$subscription) {
             $this->session->set_flashdata('error', 'Você não possui assinatura ativa.');
             redirect('dashboard');
@@ -108,7 +110,236 @@ class Planos extends CI_Controller {
         $data['subscription'] = $subscription;
         $data['title'] = 'Cancelar Assinatura - ConectCorretores';
         $data['page'] = 'planos';
-        
+
         $this->load->view('planos/cancelar', $data);
+    }
+
+    /**
+     * Criar sessão de checkout Stripe (AJAX)
+     */
+    public function criar_checkout_session() {
+        // Verificar se está logado
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['success' => false, 'error' => 'Você precisa fazer login.']);
+            return;
+        }
+
+        // Obter plan_id do POST
+        $plan_id = $this->input->post('plan_id');
+
+        if (!$plan_id) {
+            echo json_encode(['success' => false, 'error' => 'Plano não especificado.']);
+            return;
+        }
+
+        // Buscar plano
+        $plan = $this->Plan_model->get_by_id($plan_id);
+
+        if (!$plan || !$plan->ativo) {
+            echo json_encode(['success' => false, 'error' => 'Plano não encontrado.']);
+            return;
+        }
+
+        // Verificar se tem stripe_price_id
+        if (!$plan->stripe_price_id) {
+            echo json_encode(['success' => false, 'error' => 'Plano não configurado no Stripe.']);
+            return;
+        }
+
+        // Buscar dados do usuário
+        $user_id = $this->session->userdata('user_id');
+        $user = $this->User_model->get_by_id($user_id);
+
+        // Criar sessão de checkout
+        $result = $this->stripe_lib->create_checkout_session($plan->stripe_price_id, [
+            'user_id' => $user_id,
+            'email' => $user->email
+        ]);
+
+        echo json_encode($result);
+    }
+
+    /**
+     * Página de sucesso após pagamento
+     */
+    public function sucesso() {
+        // Verificar se está logado
+        if (!$this->session->userdata('logged_in')) {
+            redirect('login');
+        }
+
+        $session_id = $this->input->get('session_id');
+
+        if (!$session_id) {
+            $this->session->set_flashdata('error', 'Sessão inválida.');
+            redirect('planos');
+        }
+
+        // Recuperar sessão do Stripe
+        $result = $this->stripe_lib->retrieve_session($session_id);
+
+        if (!$result['success']) {
+            $this->session->set_flashdata('error', 'Erro ao recuperar sessão: ' . $result['error']);
+            redirect('planos');
+        }
+
+        $session = $result['session'];
+
+        // Verificar se pagamento foi concluído
+        if ($session->payment_status !== 'paid') {
+            $this->session->set_flashdata('warning', 'Pagamento ainda não foi confirmado.');
+        }
+
+        $data['session'] = $session;
+        $data['title'] = 'Pagamento Realizado - ConectCorretores';
+        $data['page'] = 'planos';
+
+        $this->load->view('planos/sucesso', $data);
+    }
+
+    /**
+     * Página de cancelamento
+     */
+    public function cancelado() {
+        $data['title'] = 'Pagamento Cancelado - ConectCorretores';
+        $data['page'] = 'planos';
+
+        $this->load->view('planos/cancelado', $data);
+    }
+
+    /**
+     * Webhook do Stripe
+     */
+    public function webhook() {
+        // Obter payload
+        $payload = @file_get_contents('php://input');
+        $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
+
+        $this->config->load('stripe');
+        $webhook_secret = $this->config->item('stripe_webhook_secret');
+
+        try {
+            if ($webhook_secret) {
+                $event = \Stripe\Webhook::constructEvent($payload, $sig_header, $webhook_secret);
+            } else {
+                $event = json_decode($payload);
+            }
+
+            // Processar evento
+            switch ($event->type) {
+                case 'checkout.session.completed':
+                    $this->_handle_checkout_completed($event->data->object);
+                    break;
+
+                case 'invoice.payment_succeeded':
+                    $this->_handle_payment_succeeded($event->data->object);
+                    break;
+
+                case 'invoice.payment_failed':
+                    $this->_handle_payment_failed($event->data->object);
+                    break;
+
+                case 'customer.subscription.deleted':
+                    $this->_handle_subscription_deleted($event->data->object);
+                    break;
+            }
+
+            http_response_code(200);
+            echo json_encode(['success' => true]);
+
+        } catch (\Exception $e) {
+            http_response_code(400);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Processar checkout completado
+     */
+    private function _handle_checkout_completed($session) {
+        $user_id = $session->client_reference_id;
+        $stripe_subscription_id = $session->subscription;
+        $stripe_customer_id = $session->customer;
+
+        // Buscar plano pelo metadata
+        $plan_id = $session->metadata->plan_id ?? null;
+
+        if (!$plan_id) {
+            return;
+        }
+
+        $plan = $this->Plan_model->get_by_id($plan_id);
+
+        if (!$plan) {
+            return;
+        }
+
+        // Calcular data de expiração
+        $data_inicio = date('Y-m-d');
+        $data_fim = $this->Plan_model->calculate_expiration_date($plan->tipo, $data_inicio);
+
+        // Criar assinatura
+        $subscription_data = [
+            'user_id' => $user_id,
+            'plan_id' => $plan_id,
+            'stripe_subscription_id' => $stripe_subscription_id,
+            'stripe_customer_id' => $stripe_customer_id,
+            'status' => 'ativa',
+            'data_inicio' => $data_inicio,
+            'data_fim' => $data_fim
+        ];
+
+        $this->Subscription_model->create($subscription_data);
+
+        // Atualizar stripe_customer_id do usuário
+        $this->User_model->update($user_id, [
+            'stripe_customer_id' => $stripe_customer_id
+        ]);
+    }
+
+    /**
+     * Processar pagamento bem-sucedido (renovação)
+     */
+    private function _handle_payment_succeeded($invoice) {
+        $stripe_subscription_id = $invoice->subscription;
+
+        $subscription = $this->Subscription_model->get_by_stripe_id($stripe_subscription_id);
+
+        if ($subscription) {
+            // Renovar assinatura
+            $plan = $this->Plan_model->get_by_id($subscription->plan_id);
+            $nova_data_fim = $this->Plan_model->calculate_expiration_date($plan->tipo, $subscription->data_fim);
+
+            $this->Subscription_model->update($subscription->id, [
+                'data_fim' => $nova_data_fim,
+                'status' => 'ativa'
+            ]);
+        }
+    }
+
+    /**
+     * Processar falha no pagamento
+     */
+    private function _handle_payment_failed($invoice) {
+        $stripe_subscription_id = $invoice->subscription;
+
+        $subscription = $this->Subscription_model->get_by_stripe_id($stripe_subscription_id);
+
+        if ($subscription) {
+            $this->Subscription_model->update($subscription->id, [
+                'status' => 'pendente'
+            ]);
+        }
+    }
+
+    /**
+     * Processar cancelamento de assinatura
+     */
+    private function _handle_subscription_deleted($stripe_subscription) {
+        $subscription = $this->Subscription_model->get_by_stripe_id($stripe_subscription->id);
+
+        if ($subscription) {
+            $this->Subscription_model->cancel($subscription->id);
+        }
     }
 }
