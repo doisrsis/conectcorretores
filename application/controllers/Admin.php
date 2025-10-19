@@ -31,6 +31,9 @@ class Admin extends CI_Controller {
         $this->load->model('Imovel_model');
         $this->load->model('Subscription_model');
         $this->load->model('Plan_model');
+        
+        // Carregar libraries
+        $this->load->library('stripe_lib');
     }
 
     /**
@@ -172,14 +175,24 @@ class Admin extends CI_Controller {
     }
 
     /**
-     * Gerenciar Planos
+     * Gerenciar Planos (com integração Stripe)
      */
     public function planos() {
+        // Buscar planos do banco
         $data['plans'] = $this->Plan_model->get_all(false); // Incluir inativos
+        
+        // Buscar produtos do Stripe
+        $stripe_result = $this->stripe_lib->list_products();
+        $data['stripe_products'] = $stripe_result['success'] ? $stripe_result['products'] : [];
+        
+        // Buscar preços do Stripe
+        $prices_result = $this->stripe_lib->list_prices();
+        $data['stripe_prices'] = $prices_result['success'] ? $prices_result['prices'] : [];
+        
         $data['title'] = 'Gerenciar Planos - Admin';
         $data['page'] = 'admin_planos';
         
-        $this->load->view('admin/planos', $data);
+        $this->load->view('admin/planos/index', $data);
     }
 
     /**
@@ -252,5 +265,267 @@ class Admin extends CI_Controller {
         $stats->novos_imoveis = $this->db->count_all_results('imoveis');
         
         return $stats;
+    }
+    
+    // ========================================
+    // GERENCIAMENTO DE PLANOS
+    // ========================================
+    
+    /**
+     * Criar novo plano
+     */
+    public function planos_criar() {
+        if ($this->input->post()) {
+            $nome = $this->input->post('nome');
+            $descricao = $this->input->post('descricao');
+            $preco = $this->input->post('preco');
+            $tipo = $this->input->post('tipo');
+            $limite_imoveis = $this->input->post('limite_imoveis');
+            
+            // Converter tipo para interval do Stripe
+            $interval_map = [
+                'mensal' => 'month',
+                'trimestral' => 'month', // 3 meses
+                'semestral' => 'month',  // 6 meses
+                'anual' => 'year'
+            ];
+            $interval = $interval_map[$tipo] ?? 'month';
+            
+            // Criar produto no Stripe
+            $product_result = $this->stripe_lib->create_product($nome, $descricao);
+            
+            if (!$product_result['success']) {
+                $this->session->set_flashdata('error', 'Erro ao criar produto no Stripe: ' . $product_result['error']);
+                redirect('admin/planos');
+                return;
+            }
+            
+            $product_id = $product_result['product']->id;
+            
+            // Criar preço no Stripe
+            $price_result = $this->stripe_lib->create_price($product_id, $preco, 'brl', $interval);
+            
+            if (!$price_result['success']) {
+                // Desativar produto se falhar ao criar preço
+                $this->stripe_lib->deactivate_product($product_id);
+                $this->session->set_flashdata('error', 'Erro ao criar preço no Stripe: ' . $price_result['error']);
+                redirect('admin/planos');
+                return;
+            }
+            
+            $price_id = $price_result['price']->id;
+            
+            // Salvar no banco de dados
+            $plan_data = [
+                'nome' => $nome,
+                'descricao' => $descricao,
+                'preco' => $preco,
+                'tipo' => $tipo,
+                'stripe_product_id' => $product_id,
+                'stripe_price_id' => $price_id,
+                'limite_imoveis' => $limite_imoveis ? $limite_imoveis : null,
+                'ativo' => 1
+            ];
+            
+            if ($this->Plan_model->create($plan_data)) {
+                $this->session->set_flashdata('success', 'Plano criado com sucesso!');
+            } else {
+                $this->session->set_flashdata('error', 'Erro ao salvar plano no banco de dados.');
+            }
+            
+            redirect('admin/planos');
+            return;
+        }
+        
+        $data['title'] = 'Criar Plano - Admin';
+        $data['page'] = 'admin_planos';
+        
+        $this->load->view('admin/planos/criar', $data);
+    }
+    
+    /**
+     * Editar plano
+     */
+    public function planos_editar($id) {
+        $plan = $this->Plan_model->get_by_id($id);
+        
+        if (!$plan) {
+            $this->session->set_flashdata('error', 'Plano não encontrado.');
+            redirect('admin/planos');
+            return;
+        }
+        
+        if ($this->input->post()) {
+            $nome = $this->input->post('nome');
+            $descricao = $this->input->post('descricao');
+            $preco = $this->input->post('preco');
+            $limite_imoveis = $this->input->post('limite_imoveis');
+            $ativo = $this->input->post('ativo');
+            
+            // Atualizar produto no Stripe
+            if ($plan->stripe_product_id) {
+                $update_result = $this->stripe_lib->update_product($plan->stripe_product_id, [
+                    'name' => $nome,
+                    'description' => $descricao
+                ]);
+                
+                if (!$update_result['success']) {
+                    $this->session->set_flashdata('error', 'Erro ao atualizar no Stripe: ' . $update_result['error']);
+                    redirect('admin/planos/editar/' . $id);
+                    return;
+                }
+            }
+            
+            // Se preço mudou, criar novo preço no Stripe
+            if ($preco != $plan->preco && $plan->stripe_product_id) {
+                $tipo = $plan->tipo;
+                $interval_map = [
+                    'mensal' => 'month',
+                    'trimestral' => 'month',
+                    'semestral' => 'month',
+                    'anual' => 'year'
+                ];
+                $interval = $interval_map[$tipo] ?? 'month';
+                
+                // Desativar preço antigo
+                if ($plan->stripe_price_id) {
+                    $this->stripe_lib->deactivate_price($plan->stripe_price_id);
+                }
+                
+                // Criar novo preço
+                $price_result = $this->stripe_lib->create_price($plan->stripe_product_id, $preco, 'brl', $interval);
+                
+                if ($price_result['success']) {
+                    $plan_data['stripe_price_id'] = $price_result['price']->id;
+                }
+            }
+            
+            // Atualizar no banco
+            $plan_data['nome'] = $nome;
+            $plan_data['descricao'] = $descricao;
+            $plan_data['preco'] = $preco;
+            $plan_data['limite_imoveis'] = $limite_imoveis ? $limite_imoveis : null;
+            $plan_data['ativo'] = $ativo;
+            
+            if ($this->Plan_model->update($id, $plan_data)) {
+                $this->session->set_flashdata('success', 'Plano atualizado com sucesso!');
+            } else {
+                $this->session->set_flashdata('error', 'Erro ao atualizar plano.');
+            }
+            
+            redirect('admin/planos');
+            return;
+        }
+        
+        $data['plan'] = $plan;
+        $data['title'] = 'Editar Plano - Admin';
+        $data['page'] = 'admin_planos';
+        
+        $this->load->view('admin/planos/editar', $data);
+    }
+    
+    /**
+     * Excluir plano
+     */
+    public function planos_excluir($id) {
+        $plan = $this->Plan_model->get_by_id($id);
+        
+        if (!$plan) {
+            $this->session->set_flashdata('error', 'Plano não encontrado.');
+            redirect('admin/planos');
+            return;
+        }
+        
+        // Verificar se há assinaturas ativas
+        $this->db->where('plan_id', $id);
+        $this->db->where('status', 'ativa');
+        $active_subscriptions = $this->db->count_all_results('subscriptions');
+        
+        if ($active_subscriptions > 0) {
+            $this->session->set_flashdata('error', 'Não é possível excluir plano com assinaturas ativas. Desative o plano ao invés de excluir.');
+            redirect('admin/planos');
+            return;
+        }
+        
+        // Desativar no Stripe
+        if ($plan->stripe_product_id) {
+            $this->stripe_lib->deactivate_product($plan->stripe_product_id);
+        }
+        
+        if ($plan->stripe_price_id) {
+            $this->stripe_lib->deactivate_price($plan->stripe_price_id);
+        }
+        
+        // Desativar no banco (não deletar)
+        if ($this->Plan_model->update($id, ['ativo' => 0])) {
+            $this->session->set_flashdata('success', 'Plano desativado com sucesso!');
+        } else {
+            $this->session->set_flashdata('error', 'Erro ao desativar plano.');
+        }
+        
+        redirect('admin/planos');
+    }
+    
+    /**
+     * Sincronizar planos do Stripe
+     */
+    public function planos_sincronizar() {
+        $products_result = $this->stripe_lib->list_products();
+        $prices_result = $this->stripe_lib->list_prices();
+        
+        if (!$products_result['success'] || !$prices_result['success']) {
+            $this->session->set_flashdata('error', 'Erro ao buscar dados do Stripe.');
+            redirect('admin/planos');
+            return;
+        }
+        
+        $synced = 0;
+        $products = $products_result['products'];
+        $prices = $prices_result['prices'];
+        
+        // Criar mapa de preços por produto
+        $price_map = [];
+        foreach ($prices as $price) {
+            if (!isset($price_map[$price->product])) {
+                $price_map[$price->product] = [];
+            }
+            $price_map[$price->product][] = $price;
+        }
+        
+        foreach ($products as $product) {
+            // Verificar se produto já existe no banco
+            $existing = $this->Plan_model->get_by_stripe_product_id($product->id);
+            
+            if (!$existing && isset($price_map[$product->id])) {
+                // Pegar primeiro preço ativo
+                $price = $price_map[$product->id][0];
+                
+                // Converter interval para tipo
+                $interval = $price->recurring->interval ?? 'month';
+                $tipo_map = [
+                    'month' => 'mensal',
+                    'year' => 'anual'
+                ];
+                $tipo = $tipo_map[$interval] ?? 'mensal';
+                
+                // Criar plano no banco
+                $plan_data = [
+                    'nome' => $product->name,
+                    'descricao' => $product->description,
+                    'preco' => $price->unit_amount / 100,
+                    'tipo' => $tipo,
+                    'stripe_product_id' => $product->id,
+                    'stripe_price_id' => $price->id,
+                    'ativo' => 1
+                ];
+                
+                if ($this->Plan_model->create($plan_data)) {
+                    $synced++;
+                }
+            }
+        }
+        
+        $this->session->set_flashdata('success', "$synced plano(s) sincronizado(s) do Stripe!");
+        redirect('admin/planos');
     }
 }

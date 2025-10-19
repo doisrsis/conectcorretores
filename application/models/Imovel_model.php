@@ -359,4 +359,30 @@ class Imovel_model extends CI_Model {
 
         return $stats;
     }
+
+    /**
+     * Contar imóveis por usuário
+     * 
+     * @param int $user_id ID do usuário
+     * @param bool $only_active Contar apenas ativos
+     * @return int Total de imóveis
+     */
+    public function count_by_user($user_id, $only_active = true) {
+        $this->db->where('user_id', $user_id);
+        if ($only_active) {
+            $this->db->where('ativo', 1);
+        }
+        return $this->db->count_all_results($this->table);
+    }
+
+    /**
+     * Inativar todos os imóveis de um usuário
+     * 
+     * @param int $user_id ID do usuário
+     * @return bool Sucesso da operação
+     */
+    public function inativar_todos_by_user($user_id) {
+        $this->db->where('user_id', $user_id);
+        return $this->db->update($this->table, ['ativo' => 0]);
+    }
 }

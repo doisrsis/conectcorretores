@@ -404,6 +404,169 @@ class Planos extends CI_Controller {
     }
 
     /**
+     * Fazer upgrade de plano (AJAX)
+     */
+    public function upgrade() {
+        // Verificar se está logado
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['success' => false, 'error' => 'Você precisa fazer login.']);
+            return;
+        }
+
+        $user_id = $this->session->userdata('user_id');
+        $new_plan_id = $this->input->post('plan_id');
+
+        if (!$new_plan_id) {
+            echo json_encode(['success' => false, 'error' => 'Plano não especificado.']);
+            return;
+        }
+
+        // Buscar assinatura atual
+        $current_subscription = $this->Subscription_model->get_active_by_user($user_id);
+
+        if (!$current_subscription) {
+            echo json_encode(['success' => false, 'error' => 'Você não possui assinatura ativa.']);
+            return;
+        }
+
+        // Buscar novo plano
+        $new_plan = $this->Plan_model->get_by_id($new_plan_id);
+
+        if (!$new_plan || !$new_plan->ativo) {
+            echo json_encode(['success' => false, 'error' => 'Plano não encontrado.']);
+            return;
+        }
+
+        // Verificar se é realmente upgrade (preço maior)
+        if ($new_plan->preco <= $current_subscription->plan_preco) {
+            echo json_encode(['success' => false, 'error' => 'Este não é um upgrade. Use a opção de downgrade.']);
+            return;
+        }
+
+        // Verificar se novo plano tem stripe_price_id
+        if (!$new_plan->stripe_price_id) {
+            echo json_encode(['success' => false, 'error' => 'Plano não configurado no Stripe.']);
+            return;
+        }
+
+        // Atualizar assinatura no Stripe
+        if ($current_subscription->stripe_subscription_id) {
+            $result = $this->stripe_lib->update_subscription(
+                $current_subscription->stripe_subscription_id,
+                $new_plan->stripe_price_id
+            );
+
+            if (!$result['success']) {
+                echo json_encode(['success' => false, 'error' => 'Erro ao atualizar no Stripe: ' . $result['error']]);
+                return;
+            }
+        }
+
+        // Atualizar assinatura no banco de dados
+        $update_data = [
+            'plan_id' => $new_plan->id,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->Subscription_model->update($current_subscription->id, $update_data)) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Upgrade realizado com sucesso!'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Erro ao atualizar assinatura no banco de dados.']);
+        }
+    }
+
+    /**
+     * Fazer downgrade de plano (AJAX)
+     */
+    public function downgrade() {
+        // Verificar se está logado
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['success' => false, 'error' => 'Você precisa fazer login.']);
+            return;
+        }
+
+        $user_id = $this->session->userdata('user_id');
+        $new_plan_id = $this->input->post('plan_id');
+
+        if (!$new_plan_id) {
+            echo json_encode(['success' => false, 'error' => 'Plano não especificado.']);
+            return;
+        }
+
+        // Buscar assinatura atual
+        $current_subscription = $this->Subscription_model->get_active_by_user($user_id);
+
+        if (!$current_subscription) {
+            echo json_encode(['success' => false, 'error' => 'Você não possui assinatura ativa.']);
+            return;
+        }
+
+        // Buscar novo plano
+        $new_plan = $this->Plan_model->get_by_id($new_plan_id);
+
+        if (!$new_plan || !$new_plan->ativo) {
+            echo json_encode(['success' => false, 'error' => 'Plano não encontrado.']);
+            return;
+        }
+
+        // Verificar se é realmente downgrade (preço menor)
+        if ($new_plan->preco >= $current_subscription->plan_preco) {
+            echo json_encode(['success' => false, 'error' => 'Este não é um downgrade. Use a opção de upgrade.']);
+            return;
+        }
+
+        // Verificar se novo plano tem stripe_price_id
+        if (!$new_plan->stripe_price_id) {
+            echo json_encode(['success' => false, 'error' => 'Plano não configurado no Stripe.']);
+            return;
+        }
+
+        // Carregar model de imóveis
+        $this->load->model('Imovel_model');
+        
+        // Verificar se precisa inativar imóveis
+        $total_imoveis = $this->Imovel_model->count_by_user($user_id);
+        $message = '';
+
+        if ($new_plan->limite_imoveis && $total_imoveis > $new_plan->limite_imoveis) {
+            // Inativar todos os imóveis
+            $this->Imovel_model->inativar_todos_by_user($user_id);
+            $message = "Seus imóveis foram inativados. Acesse 'Meus Imóveis' e reative até {$new_plan->limite_imoveis} imóveis.";
+        }
+
+        // Atualizar assinatura no Stripe
+        if ($current_subscription->stripe_subscription_id) {
+            $result = $this->stripe_lib->update_subscription(
+                $current_subscription->stripe_subscription_id,
+                $new_plan->stripe_price_id
+            );
+
+            if (!$result['success']) {
+                echo json_encode(['success' => false, 'error' => 'Erro ao atualizar no Stripe: ' . $result['error']]);
+                return;
+            }
+        }
+
+        // Atualizar assinatura no banco de dados
+        $update_data = [
+            'plan_id' => $new_plan->id,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->Subscription_model->update($current_subscription->id, $update_data)) {
+            echo json_encode([
+                'success' => true,
+                'message' => $message ?: 'Downgrade realizado com sucesso!'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Erro ao atualizar assinatura no banco de dados.']);
+        }
+    }
+
+    /**
      * Processar falha no pagamento
      */
     private function _handle_payment_failed($invoice) {

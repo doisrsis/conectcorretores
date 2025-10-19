@@ -153,14 +153,45 @@
 
                             <!-- Botão -->
                             <?php if ($current_subscription && $current_subscription->plan_id == $plan->id): ?>
-                                <button disabled class="w-full btn-secondary cursor-not-allowed">
+                                <!-- Plano Atual -->
+                                <button disabled class="w-full btn-secondary cursor-not-allowed opacity-60">
+                                    <svg class="w-5 h-5 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                    </svg>
                                     Plano Atual
                                 </button>
-                            <?php elseif ($current_subscription): ?>
-                                <button disabled class="w-full btn-secondary cursor-not-allowed">
-                                    Cancele sua assinatura primeiro
-                                </button>
+                            <?php elseif ($current_subscription && $plan->preco > $current_subscription->plan_preco): ?>
+                                <!-- Upgrade -->
+                                <div class="space-y-2">
+                                    <div class="text-center text-sm font-semibold text-green-600">
+                                        +R$ <?php echo number_format($plan->preco - $current_subscription->plan_preco, 2, ',', '.'); ?>/mês
+                                    </div>
+                                    <button onclick="iniciarUpgrade(<?php echo $plan->id; ?>)" 
+                                            data-plan-id="<?php echo $plan->id; ?>"
+                                            class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                        </svg>
+                                        Fazer Upgrade
+                                    </button>
+                                </div>
+                            <?php elseif ($current_subscription && $plan->preco < $current_subscription->plan_preco): ?>
+                                <!-- Downgrade -->
+                                <div class="space-y-2">
+                                    <div class="text-center text-sm font-semibold text-yellow-600">
+                                        Economize R$ <?php echo number_format($current_subscription->plan_preco - $plan->preco, 2, ',', '.'); ?>/mês
+                                    </div>
+                                    <button onclick="iniciarDowngrade(<?php echo $plan->id; ?>)" 
+                                            data-plan-id="<?php echo $plan->id; ?>"
+                                            class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 shadow-lg hover:shadow-xl">
+                                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                                        </svg>
+                                        Fazer Downgrade
+                                    </button>
+                                </div>
                             <?php else: ?>
+                                <!-- Sem assinatura -->
                                 <button onclick="iniciarCheckout(<?php echo $plan->id; ?>)" 
                                         data-plan-id="<?php echo $plan->id; ?>"
                                         class="w-full <?php echo $plan->nome === 'Profissional' ? 'btn-primary' : 'btn-outline'; ?> btn-checkout">
@@ -206,12 +237,12 @@
 <script src="https://js.stripe.com/v3/"></script>
 
 <!-- Script de Checkout -->
-<parameter name="CodeContent"><script>
+<script>
 // Inicializar Stripe
 const stripe = Stripe('<?php echo $this->config->item('stripe_public_key'); ?>');
 const baseUrl = '<?php echo base_url(); ?>';
 
-// Função para iniciar checkout
+// Função para iniciar checkout (nova assinatura)
 async function iniciarCheckout(planId) {
     const button = document.querySelector(`[data-plan-id="${planId}"]`);
     
@@ -252,6 +283,80 @@ async function iniciarCheckout(planId) {
         alert('Erro ao processar pagamento. Tente novamente.');
         button.disabled = false;
         button.innerHTML = 'Assinar Agora';
+    }
+}
+
+// Função para fazer upgrade
+async function iniciarUpgrade(planId) {
+    const button = document.querySelector(`[data-plan-id="${planId}"]`);
+    const originalHTML = button.innerHTML;
+    
+    // Desabilitar botão e mostrar loading
+    button.disabled = true;
+    button.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processando upgrade...';
+    
+    try {
+        const response = await fetch(baseUrl + 'planos/upgrade', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `plan_id=${planId}`
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Mostrar mensagem de sucesso
+            alert('✅ Upgrade realizado com sucesso! Redirecionando...');
+            window.location.href = baseUrl + 'dashboard';
+        } else {
+            alert('❌ Erro: ' + data.error);
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao processar upgrade. Tente novamente.');
+        button.disabled = false;
+        button.innerHTML = originalHTML;
+    }
+}
+
+// Função para fazer downgrade
+async function iniciarDowngrade(planId) {
+    const button = document.querySelector(`[data-plan-id="${planId}"]`);
+    const originalHTML = button.innerHTML;
+    
+    // Desabilitar botão e mostrar loading
+    button.disabled = true;
+    button.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processando downgrade...';
+    
+    try {
+        const response = await fetch(baseUrl + 'planos/downgrade', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `plan_id=${planId}`
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Mostrar mensagem de sucesso
+            alert('✅ Downgrade realizado com sucesso! ' + (data.message || 'Redirecionando...'));
+            window.location.href = baseUrl + 'dashboard';
+        } else {
+            alert('❌ Erro: ' + data.error);
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao processar downgrade. Tente novamente.');
+        button.disabled = false;
+        button.innerHTML = originalHTML;
     }
 }
 </script>

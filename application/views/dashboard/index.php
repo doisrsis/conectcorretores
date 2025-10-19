@@ -49,19 +49,104 @@
 
             <!-- Status da Assinatura -->
             <?php if ($subscription): ?>
-                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-green-700 font-medium">Plano Ativo</p>
-                            <p class="text-2xl font-bold text-green-900 mt-1">
-                                <?php echo $subscription->plan_nome; ?>
-                            </p>
-                            <p class="text-sm text-green-600 mt-2">
-                                Válido até <?php echo date('d/m/Y', strtotime($subscription->data_fim)); ?>
-                            </p>
+                <div class="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                    <!-- Header com gradiente -->
+                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-green-100 text-sm font-medium">Seu Plano Atual</p>
+                                <p class="text-2xl font-bold text-white mt-1">
+                                    <?php echo $subscription->plan_nome; ?>
+                                </p>
+                            </div>
+                            <div class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-white/20 text-white backdrop-blur-sm">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                                <?php echo ucfirst($subscription->status); ?>
+                            </div>
                         </div>
-                        <div class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                            <?php echo ucfirst($subscription->status); ?>
+                    </div>
+                    
+                    <!-- Conteúdo -->
+                    <div class="p-6">
+                        <div class="grid md:grid-cols-3 gap-6 mb-6">
+                            <!-- Preço -->
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Valor</p>
+                                <p class="text-2xl font-bold text-gray-900">
+                                    R$ <?php echo number_format($subscription->plan_preco, 2, ',', '.'); ?>
+                                    <span class="text-sm font-normal text-gray-500">/<?php echo $subscription->plan_tipo; ?></span>
+                                </p>
+                            </div>
+                            
+                            <!-- Limite de Imóveis -->
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Limite de Imóveis</p>
+                                <p class="text-2xl font-bold text-gray-900">
+                                    <?php 
+                                    $limite = $subscription->plan_limite_imoveis;
+                                    echo $limite ? number_format($limite, 0, ',', '.') : '∞';
+                                    ?>
+                                    <span class="text-sm font-normal text-gray-500">imóveis</span>
+                                </p>
+                                <?php if ($limite): ?>
+                                    <div class="mt-2">
+                                        <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+                                            <span>Você tem <?php echo $stats->total_imoveis; ?> cadastrados</span>
+                                            <span><?php echo round(($stats->total_imoveis / $limite) * 100); ?>%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="bg-green-600 h-2 rounded-full" style="width: <?php echo min(($stats->total_imoveis / $limite) * 100, 100); ?>%"></div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <!-- Validade -->
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Válido até</p>
+                                <p class="text-2xl font-bold text-gray-900">
+                                    <?php echo date('d/m/Y', strtotime($subscription->data_fim)); ?>
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <?php 
+                                    $dias_restantes = ceil((strtotime($subscription->data_fim) - time()) / (60 * 60 * 24));
+                                    echo $dias_restantes > 0 ? "$dias_restantes dias restantes" : "Expirado";
+                                    ?>
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Descrição do Plano -->
+                        <?php if (!empty($subscription->plan_descricao)): ?>
+                            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                                <p class="text-sm text-gray-700">
+                                    <svg class="w-4 h-4 inline mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <?php echo $subscription->plan_descricao; ?>
+                                </p>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- Ações -->
+                        <div class="flex items-center gap-3">
+                            <a href="<?php echo base_url('planos'); ?>" class="btn-primary flex-1 text-center">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                Fazer Upgrade
+                            </a>
+                            <a href="<?php echo base_url('planos'); ?>" class="btn-outline flex-1 text-center">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                                </svg>
+                                Trocar Plano
+                            </a>
+                            <a href="<?php echo base_url('planos/cancelar'); ?>" class="text-sm text-red-600 hover:text-red-700 px-4 py-2">
+                                Cancelar
+                            </a>
                         </div>
                     </div>
                 </div>

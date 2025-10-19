@@ -163,4 +163,14 @@ class Plan_model extends CI_Model {
         $days = $this->get_duration_days($tipo);
         return date('Y-m-d', strtotime($start_date . ' + ' . $days . ' days'));
     }
+    
+    /**
+     * Buscar plano por stripe_product_id
+     * 
+     * @param string $stripe_product_id ID do produto no Stripe
+     * @return object|null Dados do plano
+     */
+    public function get_by_stripe_product_id($stripe_product_id) {
+        return $this->db->get_where($this->table, ['stripe_product_id' => $stripe_product_id])->row();
+    }
 }

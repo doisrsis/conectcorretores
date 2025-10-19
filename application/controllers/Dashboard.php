@@ -68,6 +68,13 @@ class Dashboard extends CI_Controller {
 
         // Buscar dados do usuário
         $data['user'] = $this->User_model->get_by_id($user_id);
+        
+        // Buscar assinatura ativa
+        $data['subscription'] = $this->Subscription_model->get_active_by_user($user_id);
+        
+        // Buscar estatísticas
+        $data['stats'] = $this->User_model->get_stats($user_id);
+        
         $data['title'] = 'Meu Perfil - ConectCorretores';
         $data['page'] = 'perfil';
 

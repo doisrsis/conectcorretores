@@ -146,4 +146,164 @@ class Stripe_lib {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+    
+    /**
+     * Atualizar assinatura (upgrade/downgrade)
+     * 
+     * @param string $subscription_id ID da assinatura no Stripe
+     * @param string $new_price_id ID do novo preço no Stripe
+     * @return array Resultado da operação
+     */
+    public function update_subscription($subscription_id, $new_price_id) {
+        try {
+            $subscription = \Stripe\Subscription::retrieve($subscription_id);
+            
+            // Atualizar o item da assinatura com o novo preço
+            \Stripe\Subscription::update($subscription_id, [
+                'items' => [
+                    [
+                        'id' => $subscription->items->data[0]->id,
+                        'price' => $new_price_id,
+                    ],
+                ],
+                'proration_behavior' => 'always_invoice', // Calcula proporcional e cobra/credita imediatamente
+            ]);
+            
+            return ['success' => true];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    // ========================================
+    // GERENCIAMENTO DE PRODUTOS E PREÇOS
+    // ========================================
+    
+    /**
+     * Listar todos os produtos do Stripe
+     */
+    public function list_products($limit = 100) {
+        try {
+            $products = \Stripe\Product::all(['limit' => $limit, 'active' => true]);
+            return ['success' => true, 'products' => $products->data];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Listar todos os preços do Stripe
+     */
+    public function list_prices($limit = 100) {
+        try {
+            $prices = \Stripe\Price::all(['limit' => $limit, 'active' => true]);
+            return ['success' => true, 'prices' => $prices->data];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Criar produto no Stripe
+     */
+    public function create_product($name, $description = null) {
+        try {
+            $product = \Stripe\Product::create([
+                'name' => $name,
+                'description' => $description,
+            ]);
+            
+            return ['success' => true, 'product' => $product];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Criar preço no Stripe
+     */
+    public function create_price($product_id, $amount, $currency = 'brl', $interval = 'month') {
+        try {
+            $price = \Stripe\Price::create([
+                'product' => $product_id,
+                'unit_amount' => $amount * 100, // Converter para centavos
+                'currency' => $currency,
+                'recurring' => ['interval' => $interval],
+            ]);
+            
+            return ['success' => true, 'price' => $price];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Atualizar produto no Stripe
+     */
+    public function update_product($product_id, $data) {
+        try {
+            $product = \Stripe\Product::update($product_id, $data);
+            return ['success' => true, 'product' => $product];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Desativar produto no Stripe
+     */
+    public function deactivate_product($product_id) {
+        try {
+            $product = \Stripe\Product::update($product_id, ['active' => false]);
+            return ['success' => true, 'product' => $product];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Desativar preço no Stripe
+     */
+    public function deactivate_price($price_id) {
+        try {
+            $price = \Stripe\Price::update($price_id, ['active' => false]);
+            return ['success' => true, 'price' => $price];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Buscar produto por ID
+     */
+    public function get_product($product_id) {
+        try {
+            $product = \Stripe\Product::retrieve($product_id);
+            return ['success' => true, 'product' => $product];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Buscar preço por ID
+     */
+    public function get_price($price_id) {
+        try {
+            $price = \Stripe\Price::retrieve($price_id);
+            return ['success' => true, 'price' => $price];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }

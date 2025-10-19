@@ -38,7 +38,7 @@ class Subscription_model extends CI_Model {
      * @return object|null Dados da assinatura
      */
     public function get_by_id($id) {
-        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco');
+        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco, plans.descricao as plan_descricao, plans.limite_imoveis as plan_limite_imoveis');
         $this->db->from($this->table);
         $this->db->join('plans', 'plans.id = subscriptions.plan_id');
         $this->db->where('subscriptions.id', $id);
@@ -53,7 +53,7 @@ class Subscription_model extends CI_Model {
      * @return object|null Assinatura ativa
      */
     public function get_active_by_user($user_id) {
-        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco');
+        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco, plans.descricao as plan_descricao, plans.limite_imoveis as plan_limite_imoveis');
         $this->db->from($this->table);
         $this->db->join('plans', 'plans.id = subscriptions.plan_id');
         $this->db->where('subscriptions.user_id', $user_id);
@@ -72,7 +72,7 @@ class Subscription_model extends CI_Model {
      * @return array Lista de assinaturas
      */
     public function get_by_user($user_id) {
-        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco');
+        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco, plans.descricao as plan_descricao, plans.limite_imoveis as plan_limite_imoveis');
         $this->db->from($this->table);
         $this->db->join('plans', 'plans.id = subscriptions.plan_id');
         $this->db->where('subscriptions.user_id', $user_id);
