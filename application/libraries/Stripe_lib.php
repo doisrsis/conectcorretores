@@ -43,12 +43,12 @@ class Stripe_lib {
     /**
      * Criar sessão de checkout
      */
-    public function create_checkout_session($plan_id, $user_data) {
+    public function create_checkout_session($stripe_price_id, $user_data) {
         try {
             $session = \Stripe\Checkout\Session::create([
                 'payment_method_types' => $this->CI->config->item('stripe_payment_methods'),
                 'line_items' => [[
-                    'price' => $plan_id,
+                    'price' => $stripe_price_id,
                     'quantity' => 1,
                 ]],
                 'mode' => 'subscription',
@@ -58,7 +58,7 @@ class Stripe_lib {
                 'client_reference_id' => $user_data['user_id'],
                 'metadata' => [
                     'user_id' => $user_data['user_id'],
-                    'plan_id' => $plan_id,
+                    'plan_id' => $user_data['plan_id'] ?? null,  // ID do plano do banco
                 ]
             ]);
             

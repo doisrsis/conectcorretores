@@ -102,7 +102,7 @@ class Subscription_model extends CI_Model {
      * @return array Lista de assinaturas
      */
     public function get_all($filters = [], $limit = null, $offset = 0) {
-        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, users.nome as user_nome, users.email as user_email');
+        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco, users.nome as user_nome, users.email as user_email');
         $this->db->from($this->table);
         $this->db->join('plans', 'plans.id = subscriptions.plan_id');
         $this->db->join('users', 'users.id = subscriptions.user_id');
@@ -228,7 +228,7 @@ class Subscription_model extends CI_Model {
     public function get_expiring_soon($days = 7) {
         $date_limit = date('Y-m-d', strtotime('+' . $days . ' days'));
 
-        $this->db->select('subscriptions.*, users.nome, users.email, plans.nome as plan_nome');
+        $this->db->select('subscriptions.*, users.nome, users.email, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco');
         $this->db->from($this->table);
         $this->db->join('users', 'users.id = subscriptions.user_id');
         $this->db->join('plans', 'plans.id = subscriptions.plan_id');

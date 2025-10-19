@@ -97,11 +97,23 @@ class Planos extends CI_Controller {
 
         // Processar cancelamento
         if ($this->input->post('confirmar')) {
+            // Cancelar no Stripe primeiro
+            if ($subscription->stripe_subscription_id) {
+                $cancel_result = $this->stripe_lib->cancel_subscription($subscription->stripe_subscription_id);
+                
+                if (!$cancel_result['success']) {
+                    $this->session->set_flashdata('error', 'Erro ao cancelar no Stripe: ' . $cancel_result['error']);
+                    redirect('planos/cancelar');
+                    return;
+                }
+            }
+            
+            // Cancelar no banco de dados
             if ($this->Subscription_model->cancel($subscription->id)) {
                 $this->session->set_flashdata('success', 'Assinatura cancelada com sucesso.');
                 redirect('dashboard');
             } else {
-                $this->session->set_flashdata('error', 'Erro ao cancelar assinatura.');
+                $this->session->set_flashdata('error', 'Erro ao cancelar assinatura no banco de dados.');
                 redirect('planos/cancelar');
             }
         }
@@ -150,10 +162,43 @@ class Planos extends CI_Controller {
         $user_id = $this->session->userdata('user_id');
         $user = $this->User_model->get_by_id($user_id);
 
+        // Verificar se já tem assinatura ativa
+        $active_subscription = $this->Subscription_model->get_active_by_user($user_id);
+
+        if ($active_subscription) {
+            // Verificar se é o mesmo plano
+            if ($active_subscription->plan_id == $plan_id) {
+                echo json_encode(['success' => false, 'error' => 'Você já possui este plano ativo.']);
+                return;
+            }
+
+            // Verificar se é upgrade ou downgrade
+            $current_plan = $this->Plan_model->get_by_id($active_subscription->plan_id);
+            $is_upgrade = $plan->preco > $current_plan->preco;
+
+            // Cancelar assinatura antiga no Stripe
+            if ($active_subscription->stripe_subscription_id) {
+                $cancel_result = $this->stripe_lib->cancel_subscription($active_subscription->stripe_subscription_id);
+
+                if (!$cancel_result['success']) {
+                    echo json_encode(['success' => false, 'error' => 'Erro ao cancelar assinatura anterior: ' . $cancel_result['error']]);
+                    return;
+                }
+            }
+
+            // Atualizar status da assinatura antiga no banco
+            $this->Subscription_model->update($active_subscription->id, [
+                'status' => 'cancelada',
+                'cancelada_em' => date('Y-m-d H:i:s')
+            ]);
+        }
+
         // Criar sessão de checkout
         $result = $this->stripe_lib->create_checkout_session($plan->stripe_price_id, [
             'user_id' => $user_id,
-            'email' => $user->email
+            'email' => $user->email,
+            'plan_id' => $plan_id,
+            'is_upgrade' => isset($is_upgrade) ? $is_upgrade : false
         ]);
 
         echo json_encode($result);
@@ -185,8 +230,49 @@ class Planos extends CI_Controller {
 
         $session = $result['session'];
 
-        // Verificar se pagamento foi concluído
-        if ($session->payment_status !== 'paid') {
+        // Verificar se pagamento foi concluído e processar assinatura
+        if ($session->payment_status === 'paid') {
+            // Processar assinatura se pagamento confirmado
+            $user_id = $this->session->userdata('user_id');
+
+            // Verificar se assinatura já existe
+            $existing = $this->Subscription_model->get_by_stripe_id($session->subscription);
+
+            if (!$existing && $session->subscription) {
+                // Buscar plano pelo metadata
+                $plan_id = $session->metadata->plan_id ?? null;
+
+                if ($plan_id) {
+                    $plan = $this->Plan_model->get_by_id($plan_id);
+
+                    if ($plan) {
+                        // Calcular data de expiração
+                        $data_inicio = date('Y-m-d');
+                        $data_fim = $this->Plan_model->calculate_expiration_date($plan->tipo, $data_inicio);
+
+                        // Criar assinatura
+                        $subscription_data = [
+                            'user_id' => $user_id,
+                            'plan_id' => $plan_id,
+                            'stripe_subscription_id' => $session->subscription,
+                            'stripe_customer_id' => $session->customer,
+                            'status' => 'ativa',
+                            'data_inicio' => $data_inicio,
+                            'data_fim' => $data_fim
+                        ];
+
+                        $this->Subscription_model->create($subscription_data);
+
+                        // Atualizar stripe_customer_id do usuário
+                        $this->User_model->update($user_id, [
+                            'stripe_customer_id' => $session->customer
+                        ]);
+
+                        $this->session->set_flashdata('success', 'Assinatura ativada com sucesso!');
+                    }
+                }
+            }
+        } else {
             $this->session->set_flashdata('warning', 'Pagamento ainda não foi confirmado.');
         }
 

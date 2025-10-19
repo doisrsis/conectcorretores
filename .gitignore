@@ -89,3 +89,5 @@ uploads/*
 *.swp
 .env
 .env.local
+
+sync_config.jsonc
