@@ -1,0 +1,91 @@
+# ========================================
+# ConectCorretores v1.0.0
+# Autor: Rafael Dias - doisr.com.br
+# ========================================
+
+# ========================================
+# Sistema Operacional
+# ========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================================
+# CodeIgniter
+# ========================================
+application/cache/*
+!application/cache/index.html
+!application/cache/.htaccess
+
+application/logs/*
+!application/logs/index.html
+!application/logs/.htaccess
+
+!application/*/.htaccess
+
+# ========================================
+# Configurações Sensíveis
+# ========================================
+application/config/database.php
+application/config/config.php
+
+# Manter templates de configuração
+!application/config/database.example.php
+!application/config/config.example.php
+
+# ========================================
+# Dependências
+# ========================================
+/vendor/
+composer.lock
+node_modules/
+package-lock.json
+
+# ========================================
+# IDE e Editores
+# ========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+nbproject/
+*.sublime-workspace
+*.sublime-project
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+
+# ========================================
+# Testes
+# ========================================
+/tests/tests/
+/tests/results/
+tests/mocks/database/ci_test.sqlite
+coverage/
+phpunit.xml
+
+# ========================================
+# Build e Deploy
+# ========================================
+/build/
+/dist/
+*.log
+
+# ========================================
+# Uploads e Arquivos de Usuário
+# ========================================
+uploads/*
+!uploads/.htaccess
+!uploads/index.html
+
+# ========================================
+# Temporários
+# ========================================
+*.tmp
+*.bak
+*.swp
+.env
+.env.local
