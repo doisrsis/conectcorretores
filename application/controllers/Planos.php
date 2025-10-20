@@ -325,6 +325,10 @@ class Planos extends CI_Controller {
                     $this->_handle_payment_failed($event->data->object);
                     break;
 
+                case 'customer.subscription.updated':
+                    $this->_handle_subscription_updated($event->data->object);
+                    break;
+
                 case 'customer.subscription.deleted':
                     $this->_handle_subscription_deleted($event->data->object);
                     break;
@@ -582,6 +586,45 @@ class Planos extends CI_Controller {
     }
 
     /**
+     * Processar atualização de assinatura (webhook)
+     */
+    private function _handle_subscription_updated($stripe_subscription) {
+        $subscription = $this->Subscription_model->get_by_stripe_id($stripe_subscription->id);
+
+        if ($subscription) {
+            $update_data = [];
+
+            // Atualizar status
+            $stripe_status = $this->_map_stripe_status($stripe_subscription->status);
+            if ($stripe_status !== $subscription->status) {
+                $update_data['status'] = $stripe_status;
+            }
+
+            // Atualizar data de fim (com validação)
+            $stripe_end_date = date('Y-m-d', $stripe_subscription->current_period_end);
+            $stripe_start_date = date('Y-m-d', $stripe_subscription->current_period_start);
+            
+            // Validar se data fim é maior que data início
+            if ($stripe_end_date > $stripe_start_date && $stripe_end_date !== $subscription->data_fim) {
+                $update_data['data_fim'] = $stripe_end_date;
+            }
+
+            // Atualizar plano (se mudou)
+            $stripe_price_id = $stripe_subscription->items->data[0]->price->id;
+            $plan = $this->Plan_model->get_by_stripe_price_id($stripe_price_id);
+            if ($plan && $plan->id != $subscription->plan_id) {
+                $update_data['plan_id'] = $plan->id;
+            }
+
+            // Atualizar se houver mudanças
+            if (!empty($update_data)) {
+                $update_data['updated_at'] = date('Y-m-d H:i:s');
+                $this->Subscription_model->update($subscription->id, $update_data);
+            }
+        }
+    }
+
+    /**
      * Processar cancelamento de assinatura
      */
     private function _handle_subscription_deleted($stripe_subscription) {
@@ -590,5 +633,23 @@ class Planos extends CI_Controller {
         if ($subscription) {
             $this->Subscription_model->cancel($subscription->id);
         }
+    }
+
+    /**
+     * Mapear status do Stripe para status local
+     */
+    private function _map_stripe_status($stripe_status) {
+        $status_map = [
+            'active' => 'ativa',
+            'past_due' => 'pendente',
+            'canceled' => 'cancelada',
+            'unpaid' => 'pendente',
+            'incomplete' => 'pendente',
+            'incomplete_expired' => 'expirada',
+            'trialing' => 'trial',
+            'paused' => 'pausada',
+        ];
+
+        return $status_map[$stripe_status] ?? 'pendente';
     }
 }

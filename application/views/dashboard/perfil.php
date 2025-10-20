@@ -97,7 +97,12 @@
                                 </p>
                                 <p class="text-xs text-gray-500 mt-1">
                                     <?php 
-                                    $dias_restantes = ceil((strtotime($subscription->data_fim) - time()) / (60 * 60 * 24));
+                                    // Calcular dias restantes
+                                    $data_fim_timestamp = strtotime($subscription->data_fim);
+                                    $hoje_timestamp = time();
+                                    $diferenca_segundos = $data_fim_timestamp - $hoje_timestamp;
+                                    $dias_restantes = ceil($diferenca_segundos / (60 * 60 * 24));
+                                    
                                     echo $dias_restantes > 0 ? "$dias_restantes dias" : "Expirado";
                                     ?>
                                 </p>

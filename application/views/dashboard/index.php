@@ -13,9 +13,9 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
             </button>
-            
+
             <h1 class="text-xl font-semibold text-gray-900">Dashboard</h1>
-            
+
             <div class="w-6"></div>
         </div>
     </header>
@@ -23,7 +23,7 @@
     <!-- Content -->
     <main class="flex-1 p-4 lg:p-8">
         <div class="max-w-7xl mx-auto space-y-6">
-            
+
             <!-- Mensagens de Feedback -->
             <?php if ($this->session->flashdata('success')): ?>
                 <div class="alert-success">
@@ -67,7 +67,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Conteúdo -->
                     <div class="p-6">
                         <div class="grid md:grid-cols-3 gap-6 mb-6">
@@ -79,12 +79,12 @@
                                     <span class="text-sm font-normal text-gray-500">/<?php echo $subscription->plan_tipo; ?></span>
                                 </p>
                             </div>
-                            
+
                             <!-- Limite de Imóveis -->
                             <div>
                                 <p class="text-sm text-gray-600 mb-1">Limite de Imóveis</p>
                                 <p class="text-2xl font-bold text-gray-900">
-                                    <?php 
+                                    <?php
                                     $limite = $subscription->plan_limite_imoveis;
                                     echo $limite ? number_format($limite, 0, ',', '.') : '∞';
                                     ?>
@@ -102,7 +102,7 @@
                                     </div>
                                 <?php endif; ?>
                             </div>
-                            
+
                             <!-- Validade -->
                             <div>
                                 <p class="text-sm text-gray-600 mb-1">Válido até</p>
@@ -110,14 +110,22 @@
                                     <?php echo date('d/m/Y', strtotime($subscription->data_fim)); ?>
                                 </p>
                                 <p class="text-xs text-gray-500 mt-1">
-                                    <?php 
-                                    $dias_restantes = ceil((strtotime($subscription->data_fim) - time()) / (60 * 60 * 24));
+                                    <?php
+                                    // Calcular dias restantes
+                                    $data_fim_timestamp = strtotime($subscription->data_fim);
+                                    $hoje_timestamp = time();
+                                    $diferenca_segundos = $data_fim_timestamp - $hoje_timestamp;
+                                    $dias_restantes = ceil($diferenca_segundos / (60 * 60 * 24));
+
                                     echo $dias_restantes > 0 ? "$dias_restantes dias restantes" : "Expirado";
+
+                                    // DEBUG (remover depois)
+                                    //echo "<br><small style='color: red;'>Data Fim: {$subscription->data_fim} | Hoje: " . date('Y-m-d') . " | Dias: {$dias_restantes}</small>";
                                     ?>
                                 </p>
                             </div>
                         </div>
-                        
+
                         <!-- Descrição do Plano -->
                         <?php if (!empty($subscription->plan_descricao)): ?>
                             <div class="bg-gray-50 rounded-lg p-4 mb-6">
@@ -129,7 +137,7 @@
                                 </p>
                             </div>
                         <?php endif; ?>
-                        
+
                         <!-- Ações -->
                         <div class="flex items-center gap-3">
                             <a href="<?php echo base_url('planos'); ?>" class="btn-primary flex-1 text-center">
@@ -226,7 +234,7 @@
                     Ações Rápidas
                 </h3>
                 <div class="grid md:grid-cols-2 gap-4">
-                    <a href="<?php echo base_url('imoveis/novo'); ?>" 
+                    <a href="<?php echo base_url('imoveis/novo'); ?>"
                        class="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all">
                         <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
                             <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,7 +247,7 @@
                         </div>
                     </a>
 
-                    <a href="<?php echo base_url('imoveis'); ?>" 
+                    <a href="<?php echo base_url('imoveis'); ?>"
                        class="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all">
                         <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -173,4 +173,14 @@ class Plan_model extends CI_Model {
     public function get_by_stripe_product_id($stripe_product_id) {
         return $this->db->get_where($this->table, ['stripe_product_id' => $stripe_product_id])->row();
     }
+
+    /**
+     * Buscar plano por stripe_price_id
+     * 
+     * @param string $stripe_price_id ID do preço no Stripe
+     * @return object|null Dados do plano
+     */
+    public function get_by_stripe_price_id($stripe_price_id) {
+        return $this->db->get_where($this->table, ['stripe_price_id' => $stripe_price_id])->row();
+    }
 }
