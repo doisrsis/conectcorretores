@@ -195,7 +195,7 @@ $this->load->view('templates/sidebar');
                     <div class="border-t pt-6">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Valores</h3>
 
-                        <div class="grid md:grid-cols-3 gap-4">
+                        <div class="grid md:grid-cols-2 gap-4">
                             <!-- Preço -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -223,63 +223,28 @@ $this->load->view('templates/sidebar');
                                        placeholder="90"
                                        required>
                             </div>
-
-                            <!-- Valor m² (calculado) -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Valor m² (calculado)
-                                </label>
-                                <input type="text"
-                                       id="valor_m2"
-                                       class="input bg-gray-100"
-                                       placeholder="R$ 0,00"
-                                       readonly>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- Contato -->
+                    <!-- Link do Imóvel -->
                     <div class="border-t pt-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Informações de Contato</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Link do Imóvel</h3>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Link para a página do imóvel no seu site (opcional)
+                        </p>
 
-                        <div class="grid md:grid-cols-3 gap-4">
-                            <!-- Link -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Link do Site
-                                </label>
-                                <input type="url"
-                                       name="link"
-                                       value="<?php echo set_value('link', isset($imovel) ? $imovel->link : ''); ?>"
-                                       class="input"
-                                       placeholder="https://...">
-                            </div>
-
-                            <!-- Telefone -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Telefone
-                                </label>
-                                <input type="text"
-                                       id="telefone"
-                                       name="telefone"
-                                       value="<?php echo set_value('telefone', isset($imovel) ? $imovel->telefone : ''); ?>"
-                                       class="input"
-                                       placeholder="(00) 0000-0000">
-                            </div>
-
-                            <!-- WhatsApp -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                                    WhatsApp
-                                </label>
-                                <input type="text"
-                                       id="whatsapp"
-                                       name="whatsapp"
-                                       value="<?php echo set_value('whatsapp', isset($imovel) ? $imovel->whatsapp : ''); ?>"
-                                       class="input"
-                                       placeholder="(00) 9 0000-0000">
-                            </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                URL do Imóvel <span class="text-gray-400 font-normal">(Opcional)</span>
+                            </label>
+                            <input type="url"
+                                   name="link_imovel"
+                                   value="<?php echo set_value('link_imovel', isset($imovel) ? $imovel->link_imovel : ''); ?>"
+                                   class="input"
+                                   placeholder="https://seusite.com.br/imovel/123">
+                            <p class="text-xs text-gray-500 mt-1">
+                                💡 Insira o link da página do imóvel no seu site com todos os detalhes
+                            </p>
                         </div>
                     </div>
 

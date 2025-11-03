@@ -166,9 +166,7 @@ class Imoveis extends CI_Controller {
         $this->form_validation->set_rules('vagas', 'Vagas', 'integer');
         $this->form_validation->set_rules('preco', 'Preço', 'required|decimal');
         $this->form_validation->set_rules('area_privativa', 'Área Privativa', 'required|numeric');
-        $this->form_validation->set_rules('link', 'Link', 'trim|valid_url');
-        $this->form_validation->set_rules('telefone', 'Telefone', 'trim');
-        $this->form_validation->set_rules('whatsapp', 'WhatsApp', 'trim');
+        $this->form_validation->set_rules('link_imovel', 'Link do Imóvel', 'trim|valid_url');
 
         if ($this->form_validation->run() === FALSE) {
             $data['title'] = 'Cadastrar Imóvel - ConectCorretores';
@@ -190,9 +188,7 @@ class Imoveis extends CI_Controller {
             'vagas' => $this->input->post('vagas') ? $this->input->post('vagas') : null,
             'preco' => $this->input->post('preco'),
             'area_privativa' => $this->input->post('area_privativa'),
-            'link' => $this->input->post('link'),
-            'telefone' => $this->input->post('telefone'),
-            'whatsapp' => $this->input->post('whatsapp'),
+            'link_imovel' => $this->input->post('link_imovel'),
             'ativo' => 1,
         ];
 
@@ -277,9 +273,7 @@ class Imoveis extends CI_Controller {
         $this->form_validation->set_rules('vagas', 'Vagas', 'integer');
         $this->form_validation->set_rules('preco', 'Preço', 'required|decimal');
         $this->form_validation->set_rules('area_privativa', 'Área Privativa', 'required|numeric');
-        $this->form_validation->set_rules('link', 'Link', 'trim|valid_url');
-        $this->form_validation->set_rules('telefone', 'Telefone', 'trim');
-        $this->form_validation->set_rules('whatsapp', 'WhatsApp', 'trim');
+        $this->form_validation->set_rules('link_imovel', 'Link do Imóvel', 'trim|valid_url');
 
         if ($this->form_validation->run() === FALSE) {
             $data['imovel'] = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
@@ -290,7 +284,7 @@ class Imoveis extends CI_Controller {
         }
 
         // Preparar dados
-        $update_data = [
+        $imovel_data = [
             'tipo_negocio' => $this->input->post('tipo_negocio'),
             'tipo_imovel' => $this->input->post('tipo_imovel'),
             'cep' => $this->input->post('cep'),
@@ -301,13 +295,11 @@ class Imoveis extends CI_Controller {
             'vagas' => $this->input->post('vagas') ? $this->input->post('vagas') : null,
             'preco' => $this->input->post('preco'),
             'area_privativa' => $this->input->post('area_privativa'),
-            'link' => $this->input->post('link'),
-            'telefone' => $this->input->post('telefone'),
-            'whatsapp' => $this->input->post('whatsapp'),
+            'link_imovel' => $this->input->post('link_imovel'),
         ];
 
         // Atualizar
-        if ($this->Imovel_model->update($id, $update_data, $role === 'admin' ? null : $user_id)) {
+        if ($this->Imovel_model->update($id, $imovel_data)) {
             $this->session->set_flashdata('success', 'Imóvel atualizado com sucesso!');
             redirect('imoveis/ver/' . $id);
         } else {

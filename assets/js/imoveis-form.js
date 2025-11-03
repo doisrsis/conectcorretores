@@ -15,22 +15,31 @@ document.addEventListener('DOMContentLoaded', function() {
         mask: '00000-000'
     });
 
-    // Máscara de Preço (R$) - com centavos sempre visíveis
-    const precoMask = IMask(document.getElementById('preco'), {
+    // Máscara de Preço (R$) - Centavos sempre visíveis
+    const precoInput = document.getElementById('preco');
+    const precoMask = IMask(precoInput, {
         mask: 'R$ num',
-        lazy: false,  // Mostra a máscara completa sempre
+        lazy: false,
         blocks: {
             num: {
                 mask: Number,
+                scale: 2,
+                signed: false,
                 thousandsSeparator: '.',
                 radix: ',',
                 mapToRadix: ['.'],
-                scale: 2,
-                signed: false,
                 padFractionalZeros: true,
                 normalizeZeros: true,
-                min: 0
+                min: 0,
+                max: 999999999.99
             }
+        }
+    });
+
+    // Forçar atualização ao perder foco para garantir centavos
+    precoInput.addEventListener('blur', function() {
+        if (precoMask.value && precoMask.value !== 'R$ ') {
+            precoMask.updateValue();
         }
     });
 
@@ -41,30 +50,6 @@ document.addEventListener('DOMContentLoaded', function() {
         signed: false,
         thousandsSeparator: '.',
         min: 0
-    });
-
-    // Máscara de Telefone
-    const telefoneMask = IMask(document.getElementById('telefone'), {
-        mask: [
-            {
-                mask: '(00) 0000-0000'
-            },
-            {
-                mask: '(00) 0 0000-0000'
-            }
-        ]
-    });
-
-    // Máscara de WhatsApp
-    const whatsappMask = IMask(document.getElementById('whatsapp'), {
-        mask: [
-            {
-                mask: '(00) 0000-0000'
-            },
-            {
-                mask: '(00) 0 0000-0000'
-            }
-        ]
     });
 
     // ========================================
@@ -269,34 +254,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         btnBuscarCep.parentElement.appendChild(btnLimpar);
-    }
-
-    // ========================================
-    // Calcular Valor m² automaticamente
-    // ========================================
-
-    const precoInput = document.getElementById('preco');
-    const areaInput = document.getElementById('area_privativa');
-    const valorM2Input = document.getElementById('valor_m2');
-
-    function calcularValorM2() {
-        const preco = parseFloat(precoMask.unmaskedValue.replace(',', '.'));
-        const area = parseFloat(areaMask.unmaskedValue.replace(',', '.'));
-
-        if (preco > 0 && area > 0) {
-            const valorM2 = preco / area;
-            valorM2Input.value = 'R$ ' + valorM2.toFixed(2).replace('.', ',');
-        } else {
-            valorM2Input.value = 'R$ 0,00';
-        }
-    }
-
-    precoInput.addEventListener('input', calcularValorM2);
-    areaInput.addEventListener('input', calcularValorM2);
-
-    // Calcular ao carregar (modo edição)
-    if (isEdit) {
-        setTimeout(calcularValorM2, 500);
     }
 
     // ========================================

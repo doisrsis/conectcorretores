@@ -25,6 +25,12 @@
   - Cron de desativação
   - Status: ✅ Implementado
 
+- **[Melhorias no Cadastro de Imóveis](desenvolvimento/MELHORIAS-CADASTRO-IMOVEIS.md)**
+  - Remoção de campos de contato
+  - Novo campo "Link do Imóvel"
+  - Migration SQL
+  - Status: ✅ Implementado | ⏳ Migration Pendente
+
 - **[Git Workflow](desenvolvimento/GIT-WORKFLOW.md)**
   - Fluxo de trabalho com Git
   - Comandos úteis
@@ -33,6 +39,11 @@
 ---
 
 ### 🐛 Bugs Resolvidos
+
+- **[Bug: Select UF e Máscara de Preço](bugs/BUG-SELECT-UF-E-MASCARA-PRECO.md)**
+  - Problema: Select UF vazio e interferência na máscara
+  - Solução: Remover máscaras de campos inexistentes e campo Valor m²
+  - Data: 03/11/2025
 
 - **[Bug: Data Stripe Resolvido](bugs/BUG-DATA-STRIPE-RESOLVIDO.md)**
   - Problema: Datas sendo sobrescritas
