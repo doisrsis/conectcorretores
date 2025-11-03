@@ -282,4 +282,38 @@ class Subscription_model extends CI_Model {
     public function delete($id) {
         return $this->db->delete($this->table, ['id' => $id]);
     }
+    
+    /**
+     * Buscar usuários com plano vencido
+     * 
+     * @return array Lista de usuários com plano vencido
+     */
+    public function get_usuarios_plano_vencido() {
+        $this->db->select('users.id, users.nome, users.email, subscriptions.data_fim');
+        $this->db->from('users');
+        $this->db->join('subscriptions', 'subscriptions.user_id = users.id');
+        $this->db->where('subscriptions.status', 'ativa');
+        $this->db->where('subscriptions.data_fim <', date('Y-m-d'));
+        
+        return $this->db->get()->result();
+    }
+    
+    /**
+     * Atualizar status da assinatura por usuário
+     * 
+     * @param int $user_id ID do usuário
+     * @param string $status Novo status
+     * @return bool Sucesso
+     */
+    public function update_status_by_user($user_id, $status) {
+        $data = [
+            'status' => $status,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->where('user_id', $user_id);
+        $this->db->where('status', 'ativa');
+        
+        return $this->db->update($this->table, $data);
+    }
 }

@@ -267,8 +267,15 @@ class Planos extends CI_Controller {
                         $this->User_model->update($user_id, [
                             'stripe_customer_id' => $session->customer
                         ]);
+                        
+                        // Reativar imóveis
+                        $this->load->model('Imovel_model');
+                        $this->Imovel_model->reativar_por_renovacao_plano($user_id);
+                        
+                        // Log
+                        log_message('info', "Imóveis reativados para usuário ID: {$user_id}");
 
-                        $this->session->set_flashdata('success', 'Assinatura ativada com sucesso!');
+                        $this->session->set_flashdata('success', 'Assinatura ativada com sucesso! Seus imóveis foram reativados.');
                     }
                 }
             }
@@ -385,6 +392,13 @@ class Planos extends CI_Controller {
         $this->User_model->update($user_id, [
             'stripe_customer_id' => $stripe_customer_id
         ]);
+        
+        // Reativar imóveis
+        $this->load->model('Imovel_model');
+        $this->Imovel_model->reativar_por_renovacao_plano($user_id);
+        
+        // Log
+        log_message('info', "Webhook: Imóveis reativados para usuário ID: {$user_id}");
     }
 
     /**

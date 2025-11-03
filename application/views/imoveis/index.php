@@ -111,7 +111,7 @@
                             <!-- Conteúdo -->
                             <div class="p-4">
                                 <!-- Badges -->
-                                <div class="flex items-center gap-2 mb-2">
+                                <div class="flex items-center gap-2 mb-2 flex-wrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $imovel->tipo_negocio === 'compra' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'; ?>">
                                         <?php echo ucfirst($imovel->tipo_negocio); ?>
                                     </span>
@@ -120,7 +120,27 @@
                                             ⭐ Destaque
                                         </span>
                                     <?php endif; ?>
-                                    <?php if (!$imovel->ativo): ?>
+                                    
+                                    <!-- Badge de Status de Publicação -->
+                                    <?php if (isset($imovel->status_publicacao)): ?>
+                                        <?php if ($imovel->status_publicacao === 'ativo'): ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                ✅ Publicado
+                                            </span>
+                                        <?php elseif ($imovel->status_publicacao === 'inativo_plano_vencido'): ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                ⚠️ Plano Vencido
+                                            </span>
+                                        <?php elseif ($imovel->status_publicacao === 'inativo_sem_plano'): ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                ⚠️ Sem Plano
+                                            </span>
+                                        <?php elseif ($imovel->status_publicacao === 'inativo_manual'): ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                🔒 Desativado
+                                            </span>
+                                        <?php endif; ?>
+                                    <?php elseif (!$imovel->ativo): ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                             Inativo
                                         </span>
@@ -153,15 +173,43 @@
                                 </div>
 
                                 <!-- Ações -->
-                                <div class="flex gap-2">
-                                    <a href="<?php echo base_url('imoveis/ver/' . $imovel->id); ?>" 
-                                       class="flex-1 btn-outline text-center text-sm py-2">
-                                        Ver
-                                    </a>
-                                    <a href="<?php echo base_url('imoveis/editar/' . $imovel->id); ?>" 
-                                       class="flex-1 btn-primary text-center text-sm py-2">
-                                        Editar
-                                    </a>
+                                <div class="space-y-2">
+                                    <div class="flex gap-2">
+                                        <a href="<?php echo base_url('imoveis/ver/' . $imovel->id); ?>" 
+                                           class="flex-1 btn-outline text-center text-sm py-2">
+                                            Ver
+                                        </a>
+                                        
+                                        <?php 
+                                        $this->load->helper('subscription');
+                                        $pode_editar = pode_gerenciar_imoveis($this->session->userdata('user_id')) || $this->session->userdata('role') === 'admin';
+                                        ?>
+                                        
+                                        <?php if ($pode_editar): ?>
+                                            <a href="<?php echo base_url('imoveis/editar/' . $imovel->id); ?>" 
+                                               class="flex-1 btn-primary text-center text-sm py-2">
+                                                Editar
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="<?php echo base_url('planos'); ?>" 
+                                               class="flex-1 bg-red-600 hover:bg-red-700 text-white text-center text-sm py-2 rounded-lg transition">
+                                                Renovar para Editar
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Botão de Ativar/Desativar -->
+                                    <?php if ($pode_editar): ?>
+                                        <?php 
+                                        $status = isset($imovel->status_publicacao) ? $imovel->status_publicacao : 'ativo';
+                                        $is_ativo = ($status === 'ativo');
+                                        ?>
+                                        <a href="<?php echo base_url('imoveis/toggle_status/' . $imovel->id); ?>" 
+                                           class="block w-full text-center text-sm py-2 rounded-lg transition <?php echo $is_ativo ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-green-100 hover:bg-green-200 text-green-700'; ?>"
+                                           onclick="return confirm('<?php echo $is_ativo ? 'Desativar' : 'Ativar'; ?> este imóvel?')">
+                                            <?php echo $is_ativo ? '🔒 Desativar' : '✅ Ativar'; ?>
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

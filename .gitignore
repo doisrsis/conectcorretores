@@ -82,6 +82,14 @@ uploads/*
 !uploads/index.html
 
 # ========================================
+# Documentação e Scripts (Manter no Git)
+# ========================================
+# Manter: docs/, database/, scripts/
+# Ignorar apenas backups temporários
+database/backups/*.sql
+!database/backups/.gitkeep
+
+# ========================================
 # Temporários
 # ========================================
 *.tmp

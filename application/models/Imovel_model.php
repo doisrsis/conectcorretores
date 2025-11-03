@@ -385,4 +385,53 @@ class Imovel_model extends CI_Model {
         $this->db->where('user_id', $user_id);
         return $this->db->update($this->table, ['ativo' => 0]);
     }
+    
+    /**
+     * Desativar imóveis por plano vencido
+     * 
+     * @param int $user_id ID do usuário
+     * @return bool Sucesso
+     */
+    public function desativar_por_plano_vencido($user_id) {
+        $data = [
+            'status_publicacao' => 'inativo_plano_vencido',
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->where('user_id', $user_id);
+        $this->db->where('status_publicacao', 'ativo');
+        
+        return $this->db->update($this->table, $data);
+    }
+    
+    /**
+     * Reativar imóveis ao renovar plano
+     * 
+     * @param int $user_id ID do usuário
+     * @return bool Sucesso
+     */
+    public function reativar_por_renovacao_plano($user_id) {
+        $data = [
+            'status_publicacao' => 'ativo',
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->where('user_id', $user_id);
+        $this->db->where_in('status_publicacao', ['inativo_plano_vencido', 'inativo_sem_plano']);
+        
+        return $this->db->update($this->table, $data);
+    }
+    
+    /**
+     * Contar imóveis ativos por usuário
+     * 
+     * @param int $user_id ID do usuário
+     * @return int Total de imóveis ativos
+     */
+    public function count_ativos_by_user($user_id) {
+        $this->db->where('user_id', $user_id);
+        $this->db->where('status_publicacao', 'ativo');
+        
+        return $this->db->count_all_results($this->table);
+    }
 }

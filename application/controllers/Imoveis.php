@@ -25,6 +25,9 @@ class Imoveis extends CI_Controller {
         $this->load->model('User_model');
         $this->load->model('Estado_model');
         $this->load->model('Cidade_model');
+        
+        // Carregar helper de assinaturas
+        $this->load->helper('subscription');
     }
 
     /**
@@ -107,6 +110,15 @@ class Imoveis extends CI_Controller {
      * Formulário para novo imóvel
      */
     public function novo() {
+        $user_id = $this->session->userdata('user_id');
+        
+        // Verificar se tem plano ativo
+        if (!pode_gerenciar_imoveis($user_id)) {
+            $this->session->set_flashdata('error', mensagem_bloqueio_imovel());
+            redirect('planos');
+            return;
+        }
+        
         // Processar formulário
         if ($this->input->post()) {
             $this->_process_criar();
@@ -126,6 +138,15 @@ class Imoveis extends CI_Controller {
      * Processar criação de imóvel
      */
     private function _process_criar() {
+        $user_id = $this->session->userdata('user_id');
+        
+        // Verificar se tem plano ativo
+        if (!pode_gerenciar_imoveis($user_id)) {
+            $this->session->set_flashdata('error', mensagem_bloqueio_imovel());
+            redirect('planos');
+            return;
+        }
+        
         // Limpar formatação do preço e área
         $preco = $this->input->post('preco');
         $_POST['preco'] = str_replace(['R$', '.', ',', ' '], ['', '', '.', ''], $preco);
@@ -193,6 +214,13 @@ class Imoveis extends CI_Controller {
     public function editar($id) {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
+        
+        // Verificar se tem plano ativo (exceto admin)
+        if ($role !== 'admin' && !pode_gerenciar_imoveis($user_id)) {
+            $this->session->set_flashdata('error', mensagem_bloqueio_imovel(true));
+            redirect('dashboard');
+            return;
+        }
 
         // Admin pode editar todos, corretor apenas seus
         $imovel = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
@@ -222,6 +250,13 @@ class Imoveis extends CI_Controller {
     private function _process_editar($id) {
         $user_id = $this->session->userdata('user_id');
         $role = $this->session->userdata('role');
+        
+        // Verificar se tem plano ativo (exceto admin)
+        if ($role !== 'admin' && !pode_gerenciar_imoveis($user_id)) {
+            $this->session->set_flashdata('error', mensagem_bloqueio_imovel(true));
+            redirect('dashboard');
+            return;
+        }
 
         // Limpar formatação do preço e área
         $preco = $this->input->post('preco');
@@ -298,7 +333,7 @@ class Imoveis extends CI_Controller {
     }
 
     /**
-     * Ativar/Desativar imóvel
+     * Ativar/Desativar imóvel (status_publicacao)
      */
     public function toggle_status($id) {
         $user_id = $this->session->userdata('user_id');
@@ -309,15 +344,33 @@ class Imoveis extends CI_Controller {
         if (!$imovel) {
             $this->session->set_flashdata('error', 'Imóvel não encontrado.');
             redirect('imoveis');
+            return;
         }
-
-        $novo_status = $imovel->ativo ? 0 : 1;
-
-        if ($this->Imovel_model->toggle_status($id, $novo_status, $role === 'admin' ? null : $user_id)) {
-            $this->session->set_flashdata('success', 'Status atualizado com sucesso!');
-        } else {
-            $this->session->set_flashdata('error', 'Erro ao atualizar status.');
+        
+        // Verificar se tem plano ativo para reativar (exceto admin)
+        if ($role !== 'admin') {
+            $status_atual = isset($imovel->status_publicacao) ? $imovel->status_publicacao : 'ativo';
+            
+            if ($status_atual !== 'ativo' && $status_atual !== 'inativo_manual') {
+                // Imóvel desativado por falta de plano
+                if (!pode_gerenciar_imoveis($user_id)) {
+                    $this->session->set_flashdata('error', 'Você precisa de um plano ativo para reativar imóveis.');
+                    redirect('imoveis');
+                    return;
+                }
+            }
         }
+        
+        // Toggle status_publicacao
+        $status_atual = isset($imovel->status_publicacao) ? $imovel->status_publicacao : 'ativo';
+        $novo_status = ($status_atual === 'ativo') ? 'inativo_manual' : 'ativo';
+        
+        $this->Imovel_model->update($id, [
+            'status_publicacao' => $novo_status
+        ]);
+        
+        $mensagem = ($novo_status === 'ativo') ? 'Imóvel ativado com sucesso!' : 'Imóvel desativado com sucesso!';
+        $this->session->set_flashdata('success', $mensagem);
 
         redirect('imoveis');
     }

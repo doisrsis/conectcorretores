@@ -428,4 +428,61 @@ class Cron extends CI_Controller {
 
         return $status_map[$stripe_status] ?? 'pendente';
     }
+    
+    /**
+     * Desativar imóveis de usuários com plano vencido
+     * 
+     * Executar diariamente via cron:
+     * http://localhost/conectcorretores/cron/desativar_imoveis_planos_vencidos?token=SEU_TOKEN
+     */
+    public function desativar_imoveis_planos_vencidos() {
+        // Verificar token
+        if (!$this->_verify_cron_token()) {
+            show_404();
+            return;
+        }
+        
+        echo "=== Desativar Imóveis - Planos Vencidos ===\n";
+        echo "Início: " . date('Y-m-d H:i:s') . "\n\n";
+        
+        // Buscar usuários com plano vencido
+        $usuarios = $this->Subscription_model->get_usuarios_plano_vencido();
+        
+        echo "Usuários com plano vencido: " . count($usuarios) . "\n\n";
+        
+        $total_imoveis_desativados = 0;
+        
+        foreach ($usuarios as $usuario) {
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            echo "Usuário: {$usuario->nome} (ID: {$usuario->id})\n";
+            echo "Email: {$usuario->email}\n";
+            echo "Plano vencido em: {$usuario->data_fim}\n";
+            
+            // Contar imóveis ativos
+            $count = $this->Imovel_model->count_ativos_by_user($usuario->id);
+            echo "Imóveis ativos: {$count}\n";
+            
+            if ($count > 0) {
+                // Desativar
+                if ($this->Imovel_model->desativar_por_plano_vencido($usuario->id)) {
+                    echo "✅ {$count} imóveis desativados\n";
+                    $total_imoveis_desativados += $count;
+                    
+                    // Atualizar status da assinatura
+                    $this->Subscription_model->update_status_by_user($usuario->id, 'expirada');
+                    echo "✅ Assinatura marcada como expirada\n";
+                } else {
+                    echo "❌ Erro ao desativar imóveis\n";
+                }
+            } else {
+                echo "ℹ️ Nenhum imóvel ativo para desativar\n";
+            }
+            
+            echo "\n";
+        }
+        
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        echo "Total de imóveis desativados: {$total_imoveis_desativados}\n";
+        echo "Fim: " . date('Y-m-d H:i:s') . "\n";
+    }
 }
