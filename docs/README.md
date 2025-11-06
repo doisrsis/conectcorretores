@@ -5,6 +5,15 @@
 
 ---
 
+## 📋 Relatórios para Cliente
+
+- **[Relatório do Sistema de Assinaturas](RELATORIO-CLIENTE-SISTEMA-ASSINATURAS.md)**
+  - Linguagem não-técnica para apresentação
+  - O que está funcionando
+  - Melhorias sugeridas com priorização
+  - Impacto no negócio
+  - Status: 📊 Pronto para Apresentação
+
 ## 📖 Índice
 
 ### 🔧 Desenvolvimento
@@ -30,6 +39,26 @@
   - Novo campo "Link do Imóvel"
   - Migration SQL
   - Status: ✅ Implementado | ⏳ Migration Pendente
+
+- **[Análise do Sistema de Assinaturas](desenvolvimento/ANALISE-SISTEMA-ASSINATURAS.md)**
+  - Análise completa do fluxo atual
+  - Gaps identificados
+  - Melhorias sugeridas (UX, Stripe, Segurança)
+  - Priorização de implementações
+  - Status: 📊 Análise Completa
+
+- **[Sistema de Emails Transacionais](desenvolvimento/SISTEMA-EMAILS-IMPLEMENTADO.md)**
+  - Estrutura completa implementada
+  - 10 templates de emails prontos
+  - Biblioteca de envio configurada
+  - Guia de integração e testes
+  - Status: ✅ Estrutura Criada | ⏳ Configuração SMTP Pendente
+
+- **[Configurar Webhook Secret](desenvolvimento/CONFIGURAR-WEBHOOK-STRIPE-CLI.md)**
+  - Guia completo de configuração
+  - Stripe CLI setup
+  - Testes de webhooks
+  - Status: ✅ Configurado e Testado
 
 - **[Git Workflow](desenvolvimento/GIT-WORKFLOW.md)**
   - Fluxo de trabalho com Git

@@ -28,10 +28,14 @@ application/logs/*
 # ========================================
 application/config/database.php
 application/config/config.php
+application/config/email.php
+application/config/stripe.php
 
 # Manter templates de configuração
 !application/config/database.example.php
 !application/config/config.example.php
+!application/config/email.example.php
+!application/config/stripe.example.php
 
 # ========================================
 # Dependências
