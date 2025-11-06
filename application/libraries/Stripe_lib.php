@@ -211,10 +211,15 @@ class Stripe_lib {
      */
     public function create_product($name, $description = null) {
         try {
-            $product = \Stripe\Product::create([
-                'name' => $name,
-                'description' => $description,
-            ]);
+            // Preparar dados do produto
+            $product_data = ['name' => $name];
+            
+            // Adicionar descrição apenas se não estiver vazia
+            if (!empty($description)) {
+                $product_data['description'] = $description;
+            }
+            
+            $product = \Stripe\Product::create($product_data);
             
             return ['success' => true, 'product' => $product];
             
@@ -247,7 +252,15 @@ class Stripe_lib {
      */
     public function update_product($product_id, $data) {
         try {
-            $product = \Stripe\Product::update($product_id, $data);
+            // Filtrar campos vazios para evitar erro do Stripe
+            $filtered_data = [];
+            foreach ($data as $key => $value) {
+                if ($value !== '' && $value !== null) {
+                    $filtered_data[$key] = $value;
+                }
+            }
+            
+            $product = \Stripe\Product::update($product_id, $filtered_data);
             return ['success' => true, 'product' => $product];
             
         } catch (\Stripe\Exception\ApiErrorException $e) {

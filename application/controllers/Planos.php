@@ -17,6 +17,7 @@ class Planos extends CI_Controller {
         $this->load->model('Subscription_model');
         $this->load->model('User_model');
         $this->load->library('stripe_lib');
+        $this->load->library('email_lib');
     }
 
     /**
@@ -110,6 +111,12 @@ class Planos extends CI_Controller {
             
             // Cancelar no banco de dados
             if ($this->Subscription_model->cancel($subscription->id)) {
+                // Enviar email de cancelamento confirmado
+                $user = $this->User_model->get_by_id($user_id);
+                if ($user) {
+                    $this->email_lib->send_cancellation_confirmed($user, $subscription);
+                }
+                
                 $this->session->set_flashdata('success', 'Assinatura cancelada com sucesso.');
                 redirect('dashboard');
             } else {
@@ -397,6 +404,13 @@ class Planos extends CI_Controller {
         $this->load->model('Imovel_model');
         $this->Imovel_model->reativar_por_renovacao_plano($user_id);
         
+        // Enviar email de assinatura ativada
+        $user = $this->User_model->get_by_id($user_id);
+        $subscription = $this->Subscription_model->get_active_by_user($user_id);
+        if ($user && $subscription) {
+            $this->email_lib->send_subscription_activated($user, $plan, $subscription);
+        }
+        
         // Log
         log_message('info', "Webhook: Imóveis reativados para usuário ID: {$user_id}");
     }
@@ -418,6 +432,13 @@ class Planos extends CI_Controller {
                 'data_fim' => $nova_data_fim,
                 'status' => 'ativa'
             ]);
+            
+            // Enviar email de pagamento confirmado
+            $user = $this->User_model->get_by_id($subscription->user_id);
+            if ($user) {
+                $valor = $invoice->amount_paid / 100; // Converter de centavos para reais
+                $this->email_lib->send_payment_confirmed($user, $plan, $valor);
+            }
         }
     }
 
@@ -487,6 +508,17 @@ class Planos extends CI_Controller {
         ];
 
         if ($this->Subscription_model->update($current_subscription->id, $update_data)) {
+            // Enviar email de upgrade confirmado
+            $user = $this->User_model->get_by_id($user_id);
+            $old_plan = (object)[
+                'nome' => $current_subscription->plan_nome,
+                'preco' => $current_subscription->plan_preco,
+                'limite_imoveis' => $current_subscription->plan_limite_imoveis
+            ];
+            if ($user) {
+                $this->email_lib->send_upgrade_confirmed($user, $old_plan, $new_plan);
+            }
+            
             echo json_encode([
                 'success' => true,
                 'message' => 'Upgrade realizado com sucesso!'
@@ -575,6 +607,17 @@ class Planos extends CI_Controller {
         ];
 
         if ($this->Subscription_model->update($current_subscription->id, $update_data)) {
+            // Enviar email de downgrade confirmado
+            $user = $this->User_model->get_by_id($user_id);
+            $old_plan = (object)[
+                'nome' => $current_subscription->plan_nome,
+                'preco' => $current_subscription->plan_preco,
+                'limite_imoveis' => $current_subscription->plan_limite_imoveis
+            ];
+            if ($user) {
+                $this->email_lib->send_downgrade_confirmed($user, $old_plan, $new_plan);
+            }
+            
             echo json_encode([
                 'success' => true,
                 'message' => $message ?: 'Downgrade realizado com sucesso!'
@@ -596,6 +639,12 @@ class Planos extends CI_Controller {
             $this->Subscription_model->update($subscription->id, [
                 'status' => 'pendente'
             ]);
+            
+            // Enviar email de falha no pagamento
+            $user = $this->User_model->get_by_id($subscription->user_id);
+            if ($user) {
+                $this->email_lib->send_payment_failed($user, $subscription);
+            }
         }
     }
 

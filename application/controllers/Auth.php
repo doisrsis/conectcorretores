@@ -15,6 +15,7 @@ class Auth extends CI_Controller {
         parent::__construct();
         $this->load->model('User_model');
         $this->load->library('form_validation');
+        $this->load->library('email_lib');
         $this->load->helper(['url', 'form']);
     }
 
@@ -148,6 +149,9 @@ class Auth extends CI_Controller {
         if ($user_id) {
             // Buscar usuário criado
             $user = $this->User_model->get_by_id($user_id);
+
+            // Enviar email de boas-vindas
+            $this->email_lib->send_welcome($user);
 
             // Criar sessão automaticamente
             $session_data = [
