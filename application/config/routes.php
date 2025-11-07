@@ -91,6 +91,7 @@ $route['imoveis/toggle-destaque/(:num)'] = 'imoveis/toggle_destaque/$1';
 // Rotas de Planos e Assinaturas
 // ========================================
 $route['planos'] = 'planos/index';
+$route['planos/portal'] = 'planos/portal';
 $route['planos/escolher/(:num)'] = 'planos/escolher/$1';
 $route['planos/cancelar'] = 'planos/cancelar';
 $route['checkout/(:num)'] = 'checkout/index/$1';
