@@ -59,6 +59,11 @@ class Email_lib {
      */
     public function send($to, $subject, $template, $data = []) {
         try {
+            log_message('info', "=== ENVIANDO EMAIL ===");
+            log_message('info', "Para: {$to}");
+            log_message('info', "Assunto: {$subject}");
+            log_message('info', "Template: {$template}");
+            
             // Adicionar dados padrão
             $data['site_url'] = $this->site_url;
             $data['site_name'] = $this->site_name;
@@ -66,6 +71,7 @@ class Email_lib {
             
             // Renderizar template
             $message = $this->_render_template($template, $data);
+            log_message('info', "Template renderizado com sucesso");
             
             // Configurar email
             $this->CI->email->clear();
@@ -74,8 +80,17 @@ class Email_lib {
             $this->CI->email->subject($subject);
             $this->CI->email->message($message);
             
+            log_message('info', "Tentando enviar email...");
+            
             // Enviar
             $result = $this->CI->email->send();
+            
+            if ($result) {
+                log_message('info', "Email enviado com SUCESSO!");
+            } else {
+                log_message('error', "FALHA ao enviar email!");
+                log_message('error', "Debug: " . $this->CI->email->print_debugger());
+            }
             
             // Log
             if ($this->CI->config->item('email_log')) {
@@ -87,10 +102,13 @@ class Email_lib {
                 log_message('error', 'Erro ao enviar email: ' . $this->CI->email->print_debugger());
             }
             
+            log_message('info', "======================");
+            
             return $result;
             
         } catch (Exception $e) {
             log_message('error', 'Exceção ao enviar email: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
             return false;
         }
     }
@@ -299,7 +317,7 @@ class Email_lib {
      * @return bool
      */
     public function send_password_reset($user, $token) {
-        $reset_link = base_url('auth/redefinir_senha/' . $token);
+        $reset_link = base_url('password/reset/' . $token);
         
         return $this->send(
             $user->email,

@@ -311,12 +311,17 @@ class Planos extends CI_Controller {
      * Webhook do Stripe
      */
     public function webhook() {
+        // Log início do webhook
+        log_message('info', '========== WEBHOOK RECEBIDO ==========');
+        
         // Obter payload
         $payload = @file_get_contents('php://input');
         $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
 
         $this->config->load('stripe');
         $webhook_secret = $this->config->item('stripe_webhook_secret');
+        
+        log_message('info', 'Webhook Secret configurado: ' . ($webhook_secret ? 'SIM' : 'NÃO'));
 
         try {
             if ($webhook_secret) {
@@ -324,34 +329,51 @@ class Planos extends CI_Controller {
             } else {
                 $event = json_decode($payload);
             }
+            
+            log_message('info', 'Evento recebido: ' . $event->type);
 
             // Processar evento
             switch ($event->type) {
                 case 'checkout.session.completed':
+                    log_message('info', 'Processando checkout.session.completed');
                     $this->_handle_checkout_completed($event->data->object);
                     break;
 
                 case 'invoice.payment_succeeded':
+                    log_message('info', 'Processando invoice.payment_succeeded');
                     $this->_handle_payment_succeeded($event->data->object);
                     break;
 
                 case 'invoice.payment_failed':
+                    log_message('info', 'Processando invoice.payment_failed');
                     $this->_handle_payment_failed($event->data->object);
                     break;
 
                 case 'customer.subscription.updated':
+                    log_message('info', 'Processando customer.subscription.updated');
                     $this->_handle_subscription_updated($event->data->object);
                     break;
 
                 case 'customer.subscription.deleted':
+                    log_message('info', 'Processando customer.subscription.deleted');
                     $this->_handle_subscription_deleted($event->data->object);
                     break;
+                    
+                default:
+                    log_message('info', 'Evento não tratado: ' . $event->type);
             }
+            
+            log_message('info', 'Webhook processado com sucesso');
+            log_message('info', '========================================');
 
             http_response_code(200);
             echo json_encode(['success' => true]);
 
         } catch (\Exception $e) {
+            log_message('error', 'ERRO no webhook: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            log_message('info', '========================================');
+            
             http_response_code(400);
             echo json_encode(['error' => $e->getMessage()]);
         }
@@ -361,18 +383,29 @@ class Planos extends CI_Controller {
      * Processar checkout completado
      */
     private function _handle_checkout_completed($session) {
+        log_message('info', '--- Iniciando _handle_checkout_completed ---');
+        
         $user_id = $session->client_reference_id;
         $stripe_subscription_id = $session->subscription;
         $stripe_customer_id = $session->customer;
+        
+        log_message('info', 'User ID: ' . $user_id);
+        log_message('info', 'Subscription ID: ' . $stripe_subscription_id);
+        log_message('info', 'Customer ID: ' . $stripe_customer_id);
 
         // Buscar plano pelo metadata
         $plan_id = $session->metadata->plan_id ?? null;
+        
+        log_message('info', 'Plan ID do metadata: ' . $plan_id);
 
         if (!$plan_id) {
+            log_message('error', 'Plan ID não encontrado no metadata!');
             return;
         }
 
         $plan = $this->Plan_model->get_by_id($plan_id);
+        
+        log_message('info', 'Plano encontrado: ' . ($plan ? $plan->nome : 'NÃO'));
 
         if (!$plan) {
             return;
@@ -403,16 +436,27 @@ class Planos extends CI_Controller {
         // Reativar imóveis
         $this->load->model('Imovel_model');
         $this->Imovel_model->reativar_por_renovacao_plano($user_id);
+        log_message('info', 'Imóveis reativados');
         
         // Enviar email de assinatura ativada
+        log_message('info', '--- Tentando enviar email de assinatura ativada ---');
         $user = $this->User_model->get_by_id($user_id);
+        log_message('info', 'Usuário encontrado: ' . ($user ? $user->email : 'NÃO'));
+        
         $subscription = $this->Subscription_model->get_active_by_user($user_id);
+        log_message('info', 'Assinatura encontrada: ' . ($subscription ? 'SIM' : 'NÃO'));
+        
         if ($user && $subscription) {
-            $this->email_lib->send_subscription_activated($user, $plan, $subscription);
+            log_message('info', 'Chamando email_lib->send_subscription_activated()');
+            $result = $this->email_lib->send_subscription_activated($user, $plan, $subscription);
+            log_message('info', 'Email enviado: ' . ($result ? 'SUCESSO' : 'FALHA'));
+        } else {
+            log_message('error', 'Não foi possível enviar email - usuário ou assinatura não encontrados');
         }
         
         // Log
         log_message('info', "Webhook: Imóveis reativados para usuário ID: {$user_id}");
+        log_message('info', '--- Fim _handle_checkout_completed ---');
     }
 
     /**

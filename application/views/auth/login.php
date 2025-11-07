@@ -83,6 +83,13 @@
                     </div>
                 </div>
 
+                <!-- Esqueceu a Senha -->
+                <div class="mb-4 text-right">
+                    <a href="<?php echo base_url('password/forgot'); ?>" class="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        Esqueceu sua senha?
+                    </a>
+                </div>
+
                 <!-- Botão de Login -->
                 <button type="submit" class="btn-primary w-full">
                     Entrar
