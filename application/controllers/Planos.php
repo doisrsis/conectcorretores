@@ -759,4 +759,49 @@ class Planos extends CI_Controller {
 
         return $status_map[$stripe_status] ?? 'pendente';
     }
+
+    /**
+     * Abrir Customer Portal do Stripe
+     */
+    public function portal() {
+        // Verificar se está logado
+        if (!$this->session->userdata('logged_in')) {
+            $this->session->set_flashdata('error', 'Você precisa fazer login.');
+            redirect('login');
+            return;
+        }
+
+        $user_id = $this->session->userdata('user_id');
+
+        // Buscar usuário
+        $user = $this->User_model->get_by_id($user_id);
+
+        if (!$user) {
+            $this->session->set_flashdata('error', 'Usuário não encontrado.');
+            redirect('dashboard');
+            return;
+        }
+
+        // Verificar se tem stripe_customer_id
+        if (empty($user->stripe_customer_id)) {
+            $this->session->set_flashdata('error', 'Você precisa ter uma assinatura ativa para acessar o portal.');
+            redirect('planos');
+            return;
+        }
+
+        // URL de retorno
+        $return_url = base_url('dashboard');
+
+        // Criar sessão do portal
+        $result = $this->stripe_lib->create_customer_portal($user->stripe_customer_id, $return_url);
+
+        if ($result['success']) {
+            // Redirecionar para o portal
+            redirect($result['url']);
+        } else {
+            log_message('error', "Erro ao criar portal do Stripe: {$result['error']}");
+            $this->session->set_flashdata('error', 'Erro ao abrir portal de gerenciamento. Tente novamente.');
+            redirect('dashboard');
+        }
+    }
 }
