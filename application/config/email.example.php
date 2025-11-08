@@ -11,14 +11,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 // Protocolo de envio
 $config['email_protocol'] = 'smtp';
 
-// Configurações SMTP - ValueServer
-$config['smtp_host'] = 'br61-cp.valueserver.com.br';
-$config['smtp_port'] = 465;
-$config['smtp_crypto'] = 'ssl'; // SSL para porta 465
+// Configurações SMTP - BREVO (Sendinblue)
+// Serviço profissional de envio de emails transacionais
+$config['smtp_host'] = 'smtp-relay.brevo.com';
+$config['smtp_port'] = 587;
+$config['smtp_crypto'] = 'tls'; // TLS para porta 587
 
-// Credenciais SMTP
-$config['smtp_user'] = 'noreply@conectcorretores.com.br';
-$config['smtp_pass'] = 'U248nKFUVgksm[&O@2025';
+// Credenciais SMTP - BREVO
+// ⚠️ CONFIGURAR: Obter credenciais em https://app.brevo.com/settings/keys/smtp
+$config['smtp_user'] = ''; // seu-login@smtp-brevo.com
+$config['smtp_pass'] = ''; // sua-chave-smtp-brevo
 
 // Configurações de email
 $config['mailtype'] = 'html';
@@ -40,12 +42,23 @@ $config['email_debug'] = ENVIRONMENT === 'development'; // TRUE em desenvolvimen
 $config['email_log'] = TRUE; // Salvar log de emails enviados
 
 /**
- * CONFIGURAÇÃO VALUESERVER:
+ * CONFIGURAÇÃO BREVO (Sendinblue):
  *
- * Servidor SMTP: br61-cp.valueserver.com.br
- * Porta: 465 (SSL/TLS)
- * Usuário: noreply@conectcorretores.com.br
+ * Servidor SMTP: smtp-relay.brevo.com
+ * Porta: 587 (TLS)
+ * Login: Obter em https://app.brevo.com/settings/keys/smtp
+ * Senha: Chave SMTP gerada no painel Brevo
  * Autenticação: Obrigatória
+ *
+ * VANTAGENS DO BREVO:
+ * ✅ Alta taxa de entrega (deliverability)
+ * ✅ Não cai em spam
+ * ✅ Estatísticas de envio
+ * ✅ 300 emails/dia grátis
+ * ✅ Suporte a templates
+ *
+ * PAINEL BREVO:
+ * https://app.brevo.com/
  *
  * ALTERNATIVAS:
  * - Gmail: smtp.gmail.com (porta 587, TLS)
