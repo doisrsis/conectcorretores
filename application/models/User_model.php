@@ -202,13 +202,14 @@ class User_model extends CI_Model {
 
     /**
      * Verificar se usuário tem assinatura ativa
+     * Considera 'ativa' e 'pendente' (período de graça) como ativas
      * 
      * @param int $user_id ID do usuário
      * @return bool True se tem assinatura ativa
      */
     public function has_active_subscription($user_id) {
         $this->db->where('user_id', $user_id);
-        $this->db->where('status', 'ativa');
+        $this->db->where_in('status', ['ativa', 'pendente']); // Incluir pendente (período de graça)
         $this->db->where('data_fim >=', date('Y-m-d'));
         
         return $this->db->count_all_results('subscriptions') > 0;

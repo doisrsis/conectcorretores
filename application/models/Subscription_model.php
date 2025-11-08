@@ -48,6 +48,7 @@ class Subscription_model extends CI_Model {
 
     /**
      * Buscar assinatura ativa do usuário
+     * Considera 'ativa' e 'pendente' (período de graça) como ativas
      * 
      * @param int $user_id ID do usuário
      * @return object|null Assinatura ativa
@@ -57,7 +58,7 @@ class Subscription_model extends CI_Model {
         $this->db->from($this->table);
         $this->db->join('plans', 'plans.id = subscriptions.plan_id');
         $this->db->where('subscriptions.user_id', $user_id);
-        $this->db->where('subscriptions.status', 'ativa');
+        $this->db->where_in('subscriptions.status', ['ativa', 'pendente']); // Incluir pendente (período de graça)
         $this->db->where('subscriptions.data_fim >=', date('Y-m-d'));
         $this->db->order_by('subscriptions.data_fim', 'DESC');
         $this->db->limit(1);
@@ -315,5 +316,31 @@ class Subscription_model extends CI_Model {
         $this->db->where('status', 'ativa');
         
         return $this->db->update($this->table, $data);
+    }
+
+    /**
+     * Buscar assinaturas com problemas de pagamento
+     * 
+     * @return array Lista de assinaturas pendentes
+     */
+    public function get_payment_issues() {
+        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.preco as plan_preco, users.nome as user_nome, users.email as user_email');
+        $this->db->from($this->table);
+        $this->db->join('plans', 'plans.id = subscriptions.plan_id');
+        $this->db->join('users', 'users.id = subscriptions.user_id');
+        $this->db->where('subscriptions.status', 'pendente');
+        $this->db->order_by('subscriptions.updated_at', 'DESC');
+        
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Contar assinaturas com problemas
+     * 
+     * @return int Total de assinaturas pendentes
+     */
+    public function count_payment_issues() {
+        $this->db->where('status', 'pendente');
+        return $this->db->count_all_results($this->table);
     }
 }

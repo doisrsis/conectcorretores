@@ -680,15 +680,38 @@ class Planos extends CI_Controller {
         $subscription = $this->Subscription_model->get_by_stripe_id($stripe_subscription_id);
 
         if ($subscription) {
-            $this->Subscription_model->update($subscription->id, [
-                'status' => 'pendente'
-            ]);
+            // Contar tentativas de pagamento
+            $attempt_count = isset($invoice->attempt_count) ? $invoice->attempt_count : 1;
+            
+            // Calcular dias até cancelamento (baseado nas configurações do Stripe)
+            // Por padrão, Stripe tenta 4 vezes em ~2 semanas
+            $days_until_cancel = 14 - ($attempt_count * 3);
+            if ($days_until_cancel < 0) $days_until_cancel = 0;
+            
+            // Atualizar assinatura
+            $update_data = [
+                'status' => 'pendente',
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $this->Subscription_model->update($subscription->id, $update_data);
             
             // Enviar email de falha no pagamento
             $user = $this->User_model->get_by_id($subscription->user_id);
             if ($user) {
-                $this->email_lib->send_payment_failed($user, $subscription);
+                $email_data = [
+                    'nome' => $user->nome,
+                    'plano_nome' => $subscription->plan_nome,
+                    'valor' => number_format($subscription->plan_preco, 2, ',', '.'),
+                    'tentativa' => $attempt_count,
+                    'dias_restantes' => $days_until_cancel,
+                    'portal_url' => base_url('planos/portal')
+                ];
+                
+                $this->email_lib->send_payment_failed_improved($user, $email_data);
             }
+            
+            log_message('info', "Falha de pagamento processada - Subscription ID: {$subscription->id}, Tentativa: {$attempt_count}");
         }
     }
 

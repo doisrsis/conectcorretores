@@ -186,10 +186,13 @@ class Dashboard extends CI_Controller {
             $update_data = [];
 
             // 1. Sincronizar STATUS
+            // NÃO sobrescrever se status local for 'pendente' (período de graça gerenciado localmente)
             $stripe_status = $this->_map_stripe_status($stripe_sub->status);
-            if ($stripe_status !== $local_subscription->status) {
+            if ($stripe_status !== $local_subscription->status && $local_subscription->status !== 'pendente') {
                 $update_data['status'] = $stripe_status;
                 log_message('info', "Sincronização: Status alterado de '{$local_subscription->status}' para '{$stripe_status}'");
+            } elseif ($local_subscription->status === 'pendente') {
+                log_message('info', "Sincronização: Status 'pendente' mantido (período de graça local)");
             }
 
             // 2. Sincronizar DATA DE FIM (current_period_end)

@@ -74,6 +74,7 @@ if (!function_exists('get_status_assinatura')) {
         $status->tem_plano = false;
         $status->plano_ativo = false;
         $status->plano_vencido = false;
+        $status->plano_pendente = false;
         $status->data_fim = null;
         $status->subscription = null;
         
@@ -84,9 +85,14 @@ if (!function_exists('get_status_assinatura')) {
             $status->subscription = $subscription;
             $status->data_fim = $subscription->data_fim;
             
-            // Verificar se está ativo ou vencido
+            // Verificar se está ativo, pendente ou vencido
             if (strtotime($subscription->data_fim) >= strtotime(date('Y-m-d'))) {
-                $status->plano_ativo = true;
+                if ($subscription->status === 'pendente') {
+                    $status->plano_pendente = true;
+                    $status->plano_ativo = true; // Considerar como ativo (período de graça)
+                } else {
+                    $status->plano_ativo = true;
+                }
             } else {
                 $status->plano_vencido = true;
             }

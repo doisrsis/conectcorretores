@@ -222,6 +222,26 @@ class Email_lib {
     }
 
     /**
+     * Enviar email melhorado de falha no pagamento
+     * 
+     * @param object $user Dados do usuário
+     * @param array $data Dados da falha (tentativa, dias_restantes, etc)
+     * @return bool
+     */
+    public function send_payment_failed_improved($user, $data) {
+        $subject = $data['tentativa'] == 1 
+            ? '⚠️ Problema com seu Pagamento - Ação Necessária' 
+            : '🚨 Última Tentativa - Pagamento Pendente';
+            
+        return $this->send(
+            $user->email,
+            $subject,
+            'payment_failed_improved',
+            $data
+        );
+    }
+
+    /**
      * Enviar email de plano vencido
      * 
      * @param object $user Dados do usuário

@@ -528,4 +528,25 @@ class Admin extends CI_Controller {
         $this->session->set_flashdata('success', "$synced plano(s) sincronizado(s) do Stripe!");
         redirect('admin/planos');
     }
+
+    /**
+     * Dashboard de Inadimplência
+     */
+    public function inadimplencia() {
+        $data['title'] = 'Inadimplência - Admin';
+        $data['page'] = 'admin_inadimplencia';
+        
+        // Buscar assinaturas com problemas
+        $data['payment_issues'] = $this->Subscription_model->get_payment_issues();
+        $data['total_issues'] = $this->Subscription_model->count_payment_issues();
+        
+        // Estatísticas
+        $total_valor_pendente = 0;
+        foreach ($data['payment_issues'] as $issue) {
+            $total_valor_pendente += $issue->plan_preco;
+        }
+        $data['total_valor_pendente'] = $total_valor_pendente;
+        
+        $this->load->view('admin/inadimplencia', $data);
+    }
 }
