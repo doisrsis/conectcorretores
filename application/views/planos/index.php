@@ -48,27 +48,77 @@
 
             <!-- Assinatura Atual -->
             <?php if ($current_subscription): ?>
-                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-green-700 font-medium mb-1">Seu Plano Atual</p>
-                            <p class="text-2xl font-bold text-green-900">
-                                <?php echo $current_subscription->plan_nome; ?>
-                            </p>
-                            <p class="text-sm text-green-600 mt-2">
-                                Válido até <?php echo date('d/m/Y', strtotime($current_subscription->data_fim)); ?>
-                            </p>
+                <!-- Banner de Trial Ativo -->
+                <?php if ($current_subscription->is_trial): ?>
+                    <?php 
+                        $days_left = ceil((strtotime($current_subscription->trial_ends_at) - time()) / 86400);
+                        $is_expiring_soon = $days_left <= 3;
+                    ?>
+                    <div class="bg-gradient-to-r <?php echo $is_expiring_soon ? 'from-orange-50 to-red-50 border-orange-300' : 'from-blue-50 to-indigo-50 border-blue-300'; ?> border-2 rounded-xl p-6 mb-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-2xl">🎁</span>
+                                    <p class="text-sm <?php echo $is_expiring_soon ? 'text-orange-700' : 'text-blue-700'; ?> font-medium">
+                                        Período de Teste Gratuito
+                                    </p>
+                                </div>
+                                <p class="text-2xl font-bold <?php echo $is_expiring_soon ? 'text-orange-900' : 'text-blue-900'; ?>">
+                                    <?php echo $current_subscription->plan_nome; ?>
+                                </p>
+                                <p class="text-sm <?php echo $is_expiring_soon ? 'text-orange-600' : 'text-blue-600'; ?> mt-2">
+                                    <?php if ($days_left > 1): ?>
+                                        ⏰ Restam <strong><?php echo $days_left; ?> dias</strong> de teste gratuito
+                                    <?php elseif ($days_left == 1): ?>
+                                        ⏰ <strong>Último dia</strong> de teste gratuito!
+                                    <?php else: ?>
+                                        ⏰ Seu teste expira <strong>hoje</strong>!
+                                    <?php endif; ?>
+                                </p>
+                                <p class="text-xs <?php echo $is_expiring_soon ? 'text-orange-500' : 'text-blue-500'; ?> mt-1">
+                                    Expira em <?php echo date('d/m/Y às H:i', strtotime($current_subscription->trial_ends_at)); ?>
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <div class="mb-3">
+                                    <p class="text-sm <?php echo $is_expiring_soon ? 'text-orange-600' : 'text-blue-600'; ?> mb-1">
+                                        Após o trial:
+                                    </p>
+                                    <p class="text-3xl font-bold <?php echo $is_expiring_soon ? 'text-orange-900' : 'text-blue-900'; ?>">
+                                        R$ <?php echo number_format($current_subscription->plan_preco, 2, ',', '.'); ?>
+                                    </p>
+                                    <p class="text-sm <?php echo $is_expiring_soon ? 'text-orange-600' : 'text-blue-600'; ?>">/<?php echo $current_subscription->plan_tipo; ?></p>
+                                </div>
+                                <a href="<?php echo base_url('planos/escolher/' . $current_subscription->plan_id); ?>" 
+                                   class="inline-block px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                                    🚀 Continuar com Plano Pago
+                                </a>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-3xl font-bold text-green-900">
-                                R$ <?php echo number_format($current_subscription->plan_preco, 2, ',', '.'); ?>
-                            </p>
-                            <p class="text-sm text-green-600">/<?php echo $current_subscription->plan_tipo; ?></p>
-                            <div class="mt-3 space-y-2">
-                                <a href="<?php echo base_url('planos/portal'); ?>" 
-                                   class="inline-block px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
-                                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    </div>
+                <?php else: ?>
+                    <!-- Assinatura Paga Normal -->
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-green-700 font-medium mb-1">Seu Plano Atual</p>
+                                <p class="text-2xl font-bold text-green-900">
+                                    <?php echo $current_subscription->plan_nome; ?>
+                                </p>
+                                <p class="text-sm text-green-600 mt-2">
+                                    Válido até <?php echo date('d/m/Y', strtotime($current_subscription->data_fim)); ?>
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-3xl font-bold text-green-900">
+                                    R$ <?php echo number_format($current_subscription->plan_preco, 2, ',', '.'); ?>
+                                </p>
+                                <p class="text-sm text-green-600">/<?php echo $current_subscription->plan_tipo; ?></p>
+                                <div class="mt-3 space-y-2">
+                                    <a href="<?php echo base_url('planos/portal'); ?>" 
+                                       class="inline-block px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                                        <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     </svg>
                                     Gerenciar Assinatura
@@ -78,10 +128,11 @@
                                    class="text-sm text-red-600 hover:text-red-700 inline-block">
                                     Cancelar assinatura
                                 </a>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                <?php endif; ?>
             <?php endif; ?>
 
             <!-- Planos -->
@@ -202,12 +253,47 @@
                                     </button>
                                 </div>
                             <?php else: ?>
-                                <!-- Sem assinatura -->
-                                <button onclick="iniciarCheckout(<?php echo $plan->id; ?>)" 
-                                        data-plan-id="<?php echo $plan->id; ?>"
-                                        class="w-full <?php echo $plan->nome === 'Profissional' ? 'btn-primary' : 'btn-outline'; ?> btn-checkout">
-                                    Assinar Agora
-                                </button>
+                                <!-- Sem assinatura - Mostrar Trial ou Assinar -->
+                                <?php 
+                                    $user_id = $this->session->userdata('user_id');
+                                    $has_used_trial = $user_id ? $this->Subscription_model->has_used_trial($user_id) : false;
+                                ?>
+                                
+                                <?php if (!$has_used_trial): ?>
+                                    <!-- Botão de Trial -->
+                                    <div class="space-y-3">
+                                        <a href="<?php echo base_url('planos/iniciar_trial/' . $plan->id); ?>" 
+                                           class="block w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-4 rounded-lg font-bold text-center hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                                            🎁 Testar Grátis por 7 Dias
+                                        </a>
+                                        <p class="text-xs text-center text-gray-500">
+                                            Sem cartão de crédito • Cancele quando quiser
+                                        </p>
+                                        <div class="relative">
+                                            <div class="absolute inset-0 flex items-center">
+                                                <div class="w-full border-t border-gray-200"></div>
+                                            </div>
+                                            <div class="relative flex justify-center text-xs">
+                                                <span class="px-2 bg-white text-gray-400">ou</span>
+                                            </div>
+                                        </div>
+                                        <button onclick="iniciarCheckout(<?php echo $plan->id; ?>)" 
+                                                data-plan-id="<?php echo $plan->id; ?>"
+                                                class="w-full <?php echo $plan->nome === 'Profissional' ? 'btn-primary' : 'btn-outline'; ?> btn-checkout">
+                                            Assinar Agora
+                                        </button>
+                                    </div>
+                                <?php else: ?>
+                                    <!-- Apenas botão de assinar (já usou trial) -->
+                                    <button onclick="iniciarCheckout(<?php echo $plan->id; ?>)" 
+                                            data-plan-id="<?php echo $plan->id; ?>"
+                                            class="w-full <?php echo $plan->nome === 'Profissional' ? 'btn-primary' : 'btn-checkout'; ?> btn-checkout">
+                                        Assinar Agora
+                                    </button>
+                                    <p class="text-xs text-center text-gray-500 mt-2">
+                                        Trial já utilizado
+                                    </p>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -221,6 +307,16 @@
                 </h3>
                 
                 <div class="space-y-4 max-w-3xl mx-auto">
+                    <div class="border-b pb-4">
+                        <h4 class="font-semibold text-gray-900 mb-2">🎁 Como funciona o período de teste gratuito?</h4>
+                        <p class="text-gray-600">Você tem 7 dias para testar todas as funcionalidades do plano escolhido, completamente grátis! Não pedimos cartão de crédito e você pode cancelar a qualquer momento.</p>
+                    </div>
+                    
+                    <div class="border-b pb-4">
+                        <h4 class="font-semibold text-gray-900 mb-2">O que acontece após o período de teste?</h4>
+                        <p class="text-gray-600">Você receberá lembretes por email 3 dias e 1 dia antes do fim do trial. Se não assinar um plano pago, seu acesso será suspenso, mas seus dados ficam salvos por 30 dias.</p>
+                    </div>
+                    
                     <div class="border-b pb-4">
                         <h4 class="font-semibold text-gray-900 mb-2">Posso cancelar a qualquer momento?</h4>
                         <p class="text-gray-600">Sim! Você pode cancelar sua assinatura a qualquer momento sem multas ou taxas adicionais.</p>

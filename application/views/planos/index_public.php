@@ -30,11 +30,14 @@
             
             <!-- Header -->
             <div class="text-center">
+                <div class="inline-block bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-2 rounded-full text-sm font-semibold mb-4">
+                    🎁 7 Dias Grátis • Sem Cartão de Crédito
+                </div>
                 <h1 class="text-5xl font-bold text-gray-900 mb-4">
                     Planos e Preços
                 </h1>
                 <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-                    Escolha o plano ideal para gerenciar seus imóveis de forma profissional
+                    Teste grátis por 7 dias e escolha o plano ideal para gerenciar seus imóveis de forma profissional
                 </p>
             </div>
 
@@ -117,10 +120,15 @@
                             </ul>
 
                             <!-- Botão -->
-                            <a href="<?php echo base_url('register'); ?>" 
-                               class="block w-full text-center <?php echo $plan->nome === 'Profissional' ? 'btn-primary' : 'btn-outline'; ?>">
-                                Começar Agora
-                            </a>
+                            <div class="space-y-3">
+                                <a href="<?php echo base_url('register'); ?>" 
+                                   class="block w-full text-center bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-4 rounded-lg font-bold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                                    🎁 Testar Grátis por 7 Dias
+                                </a>
+                                <p class="text-xs text-center text-gray-500">
+                                    Sem cartão de crédito • Cancele quando quiser
+                                </p>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
