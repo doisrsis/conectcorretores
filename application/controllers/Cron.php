@@ -17,9 +17,11 @@ class Cron extends CI_Controller {
         // Carregar models
         $this->load->model('Subscription_model');
         $this->load->model('Plan_model');
+        $this->load->model('User_model');
         
         // Carregar libraries
         $this->load->library('stripe_lib');
+        $this->load->library('email_lib');
     }
 
     /**
@@ -484,5 +486,217 @@ class Cron extends CI_Controller {
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
         echo "Total de imóveis desativados: {$total_imoveis_desativados}\n";
         echo "Fim: " . date('Y-m-d H:i:s') . "\n";
+    }
+
+    // ========================================
+    // CRON JOBS DE TRIAL (PERÍODO DE TESTE)
+    // ========================================
+
+    /**
+     * Processar trials expirados
+     * 
+     * Executar diariamente via cron:
+     * 0 2 * * * curl https://conectcorretores.doisr.com.br/cron/process_expired_trials?token=SEU_TOKEN
+     * 
+     * Ou configurar no cPanel:
+     * 0 2 * * * wget -q -O - "https://conectcorretores.doisr.com.br/cron/process_expired_trials?token=SEU_TOKEN" >/dev/null 2>&1
+     */
+    public function process_expired_trials() {
+        // Verificar token
+        if (!$this->_is_cli() && !$this->_verify_cron_token()) {
+            show_404();
+            return;
+        }
+
+        $start_time = microtime(true);
+        
+        echo "=== Processar Trials Expirados ===\n";
+        echo "Início: " . date('Y-m-d H:i:s') . "\n\n";
+
+        // Buscar trials expirados
+        $expired_trials = $this->Subscription_model->get_expired_trials();
+        
+        echo "Total de trials expirados: " . count($expired_trials) . "\n\n";
+
+        $processed = 0;
+        $errors = 0;
+
+        foreach ($expired_trials as $trial) {
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            echo "Trial ID: {$trial->id}\n";
+            echo "Usuário: {$trial->nome} ({$trial->email})\n";
+            echo "Plano: {$trial->plan_nome}\n";
+            echo "Expirou em: {$trial->trial_ends_at}\n";
+
+            try {
+                // Expirar trial
+                if ($this->Subscription_model->update($trial->id, [
+                    'status' => 'expirada',
+                    'updated_at' => date('Y-m-d H:i:s')
+                ])) {
+                    echo "✅ Status alterado para 'expirada'\n";
+                    
+                    // Enviar email de trial expirado
+                    $user = $this->User_model->get_by_id($trial->user_id);
+                    if ($user) {
+                        if ($this->email_lib->send_trial_expired($user, $trial)) {
+                            echo "✅ Email de expiração enviado\n";
+                        } else {
+                            echo "⚠️ Falha ao enviar email\n";
+                        }
+                    }
+                    
+                    $processed++;
+                } else {
+                    echo "❌ Erro ao atualizar status\n";
+                    $errors++;
+                }
+            } catch (Exception $e) {
+                echo "❌ Exceção: {$e->getMessage()}\n";
+                $errors++;
+            }
+
+            echo "\n";
+        }
+
+        $end_time = microtime(true);
+        $duration = round($end_time - $start_time, 2);
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        echo "=== Resumo ===\n";
+        echo "Total processado: $processed\n";
+        echo "Erros: $errors\n";
+        echo "Tempo: {$duration}s\n";
+        echo "Fim: " . date('Y-m-d H:i:s') . "\n";
+    }
+
+    /**
+     * Enviar lembretes de trials expirando
+     * 
+     * Executar diariamente via cron:
+     * 0 10 * * * curl https://conectcorretores.doisr.com.br/cron/send_trial_reminders?token=SEU_TOKEN
+     * 
+     * Ou configurar no cPanel:
+     * 0 10 * * * wget -q -O - "https://conectcorretores.doisr.com.br/cron/send_trial_reminders?token=SEU_TOKEN" >/dev/null 2>&1
+     */
+    public function send_trial_reminders() {
+        // Verificar token
+        if (!$this->_is_cli() && !$this->_verify_cron_token()) {
+            show_404();
+            return;
+        }
+
+        $start_time = microtime(true);
+        
+        echo "=== Enviar Lembretes de Trial ===\n";
+        echo "Início: " . date('Y-m-d H:i:s') . "\n\n";
+
+        $sent = 0;
+        $errors = 0;
+
+        // Enviar lembretes para trials expirando em 3 dias
+        $trials_3_days = $this->Subscription_model->get_trials_expiring_soon(3);
+        
+        echo "Trials expirando em 3 dias: " . count($trials_3_days) . "\n";
+
+        foreach ($trials_3_days as $trial) {
+            $days_left = ceil((strtotime($trial->trial_ends_at) - time()) / 86400);
+            
+            echo "  • {$trial->nome} - {$days_left} dias restantes\n";
+
+            try {
+                $user = $this->User_model->get_by_id($trial->user_id);
+                if ($user && $this->email_lib->send_trial_expiring($user, $trial, $days_left)) {
+                    echo "    ✅ Email enviado\n";
+                    $sent++;
+                } else {
+                    echo "    ❌ Falha ao enviar\n";
+                    $errors++;
+                }
+            } catch (Exception $e) {
+                echo "    ❌ Exceção: {$e->getMessage()}\n";
+                $errors++;
+            }
+        }
+
+        echo "\n";
+
+        // Enviar lembretes para trials expirando em 1 dia
+        $trials_1_day = $this->Subscription_model->get_trials_expiring_soon(1);
+        
+        echo "Trials expirando em 1 dia: " . count($trials_1_day) . "\n";
+
+        foreach ($trials_1_day as $trial) {
+            $days_left = ceil((strtotime($trial->trial_ends_at) - time()) / 86400);
+            
+            echo "  • {$trial->nome} - último dia!\n";
+
+            try {
+                $user = $this->User_model->get_by_id($trial->user_id);
+                if ($user && $this->email_lib->send_trial_expiring($user, $trial, $days_left)) {
+                    echo "    ✅ Email enviado\n";
+                    $sent++;
+                } else {
+                    echo "    ❌ Falha ao enviar\n";
+                    $errors++;
+                }
+            } catch (Exception $e) {
+                echo "    ❌ Exceção: {$e->getMessage()}\n";
+                $errors++;
+            }
+        }
+
+        $end_time = microtime(true);
+        $duration = round($end_time - $start_time, 2);
+
+        echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        echo "=== Resumo ===\n";
+        echo "Emails enviados: $sent\n";
+        echo "Erros: $errors\n";
+        echo "Tempo: {$duration}s\n";
+        echo "Fim: " . date('Y-m-d H:i:s') . "\n";
+    }
+
+    /**
+     * Estatísticas de trials
+     * 
+     * Ver estatísticas de conversão e uso de trials
+     * https://conectcorretores.doisr.com.br/cron/trial_stats?token=SEU_TOKEN
+     */
+    public function trial_stats() {
+        // Verificar token
+        if (!$this->_is_cli() && !$this->_verify_cron_token()) {
+            show_404();
+            return;
+        }
+
+        echo "=== Estatísticas de Trials ===\n";
+        echo "Data: " . date('Y-m-d H:i:s') . "\n\n";
+
+        // Trials ativos
+        $active_trials = $this->Subscription_model->count_active_trials();
+        echo "📊 Trials Ativos: {$active_trials}\n";
+
+        // Total de conversões
+        $conversions = $this->Subscription_model->count_trial_conversions();
+        echo "✅ Conversões (trial → pago): {$conversions}\n";
+
+        // Taxa de conversão
+        $conversion_rate = $this->Subscription_model->get_trial_conversion_rate();
+        echo "📈 Taxa de Conversão: " . number_format($conversion_rate, 2) . "%\n\n";
+
+        // Trials expirando em breve
+        $expiring_soon = $this->Subscription_model->get_trials_expiring_soon(7);
+        echo "⏰ Trials expirando em 7 dias: " . count($expiring_soon) . "\n";
+
+        if (count($expiring_soon) > 0) {
+            echo "\nDetalhes:\n";
+            foreach ($expiring_soon as $trial) {
+                $days_left = ceil((strtotime($trial->trial_ends_at) - time()) / 86400);
+                echo "  • {$trial->nome} ({$trial->email}) - {$days_left} dias\n";
+            }
+        }
+
+        echo "\n=== Fim ===\n";
     }
 }

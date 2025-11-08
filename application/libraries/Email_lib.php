@@ -334,10 +334,10 @@ class Email_lib {
      * 
      * @param object $user Dados do usuário
      * @param string $token Token de recuperação
-     * @return bool
+     * @return bool Sucesso no envio
      */
     public function send_password_reset($user, $token) {
-        $reset_link = base_url('password/reset/' . $token);
+        $reset_link = base_url('auth/reset_password/' . $token);
         
         return $this->send(
             $user->email,
@@ -347,6 +347,101 @@ class Email_lib {
                 'nome' => $user->nome,
                 'reset_link' => $reset_link,
                 'validade' => '24 horas'
+            ]
+        );
+    }
+
+    // ========================================
+    // EMAILS DE TRIAL (PERÍODO DE TESTE)
+    // ========================================
+
+    /**
+     * Enviar email de boas-vindas ao trial
+     * 
+     * @param object $user Dados do usuário
+     * @param object $subscription Dados da assinatura trial
+     * @return bool Sucesso no envio
+     */
+    public function send_trial_welcome($user, $subscription) {
+        $trial_days = ceil((strtotime($subscription->trial_ends_at) - time()) / 86400);
+        
+        return $this->send(
+            $user->email,
+            'Bem-vindo ao seu período de teste gratuito! 🎉',
+            'trial_welcome',
+            [
+                'nome' => $user->nome,
+                'plan_nome' => $subscription->plan_nome,
+                'trial_days' => $trial_days,
+                'trial_ends_at' => date('d/m/Y', strtotime($subscription->trial_ends_at)),
+                'dashboard_link' => base_url('dashboard')
+            ]
+        );
+    }
+
+    /**
+     * Enviar lembrete de trial expirando
+     * 
+     * @param object $user Dados do usuário
+     * @param object $subscription Dados da assinatura trial
+     * @param int $days_left Dias restantes
+     * @return bool Sucesso no envio
+     */
+    public function send_trial_expiring($user, $subscription, $days_left) {
+        return $this->send(
+            $user->email,
+            "Seu período de teste termina em {$days_left} dias ⏰",
+            'trial_expiring',
+            [
+                'nome' => $user->nome,
+                'plan_nome' => $subscription->plan_nome,
+                'days_left' => $days_left,
+                'trial_ends_at' => date('d/m/Y', strtotime($subscription->trial_ends_at)),
+                'plan_preco' => number_format($subscription->plan_preco, 2, ',', '.'),
+                'upgrade_link' => base_url('planos/checkout/' . $subscription->plan_id)
+            ]
+        );
+    }
+
+    /**
+     * Enviar email de trial expirado
+     * 
+     * @param object $user Dados do usuário
+     * @param object $subscription Dados da assinatura trial
+     * @return bool Sucesso no envio
+     */
+    public function send_trial_expired($user, $subscription) {
+        return $this->send(
+            $user->email,
+            'Seu período de teste expirou 😢',
+            'trial_expired',
+            [
+                'nome' => $user->nome,
+                'plan_nome' => $subscription->plan_nome,
+                'plan_preco' => number_format($subscription->plan_preco, 2, ',', '.'),
+                'planos_link' => base_url('planos')
+            ]
+        );
+    }
+
+    /**
+     * Enviar email de conversão de trial para pago
+     * 
+     * @param object $user Dados do usuário
+     * @param object $subscription Dados da assinatura
+     * @return bool Sucesso no envio
+     */
+    public function send_trial_converted($user, $subscription) {
+        return $this->send(
+            $user->email,
+            'Assinatura ativada com sucesso! 🎉',
+            'trial_converted',
+            [
+                'nome' => $user->nome,
+                'plan_nome' => $subscription->plan_nome,
+                'plan_preco' => number_format($subscription->plan_preco, 2, ',', '.'),
+                'data_fim' => date('d/m/Y', strtotime($subscription->data_fim)),
+                'dashboard_link' => base_url('dashboard')
             ]
         );
     }

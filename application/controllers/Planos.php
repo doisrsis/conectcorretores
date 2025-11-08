@@ -80,6 +80,68 @@ class Planos extends CI_Controller {
     }
 
     /**
+     * Iniciar período de teste gratuito (trial)
+     * 
+     * @param int $plan_id ID do plano
+     */
+    public function iniciar_trial($plan_id) {
+        // Verificar se está logado
+        if (!$this->session->userdata('logged_in')) {
+            $this->session->set_flashdata('error', 'Você precisa fazer login para iniciar o período de teste.');
+            $this->session->set_userdata('redirect_after_login', 'planos/iniciar_trial/' . $plan_id);
+            redirect('login');
+        }
+
+        $user_id = $this->session->userdata('user_id');
+
+        // Verificar se plano existe
+        $plan = $this->Plan_model->get_by_id($plan_id);
+
+        if (!$plan || !$plan->ativo) {
+            $this->session->set_flashdata('error', 'Plano não encontrado ou inativo.');
+            redirect('planos');
+        }
+
+        // Verificar se já tem assinatura ativa (incluindo trial)
+        $current_subscription = $this->Subscription_model->get_active_by_user($user_id);
+
+        if ($current_subscription) {
+            $this->session->set_flashdata('error', 'Você já possui uma assinatura ativa.');
+            redirect('dashboard');
+        }
+
+        // Verificar se já usou trial antes
+        if ($this->Subscription_model->has_used_trial($user_id)) {
+            $this->session->set_flashdata('error', 'Você já utilizou seu período de teste gratuito. Assine um plano para continuar.');
+            redirect('planos');
+        }
+
+        // Criar trial (7 dias grátis)
+        $trial_days = 7;
+        $subscription_id = $this->Subscription_model->create_trial($user_id, $plan_id, $trial_days);
+
+        if ($subscription_id) {
+            // Buscar dados da assinatura criada
+            $subscription = $this->Subscription_model->get_by_id($subscription_id);
+            $user = $this->User_model->get_by_id($user_id);
+
+            // Enviar email de boas-vindas ao trial
+            $this->email_lib->send_trial_welcome($user, $subscription);
+
+            // Mensagem de sucesso
+            $this->session->set_flashdata('success', 
+                "🎉 Parabéns! Seu período de teste de {$trial_days} dias foi ativado com sucesso! " .
+                "Aproveite todas as funcionalidades do plano {$plan->nome} gratuitamente."
+            );
+
+            redirect('dashboard');
+        } else {
+            $this->session->set_flashdata('error', 'Erro ao criar período de teste. Tente novamente.');
+            redirect('planos');
+        }
+    }
+
+    /**
      * Cancelar assinatura
      */
     public function cancelar() {

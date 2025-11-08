@@ -48,7 +48,7 @@ class Subscription_model extends CI_Model {
 
     /**
      * Buscar assinatura ativa do usuário
-     * Considera 'ativa' e 'pendente' (período de graça) como ativas
+     * Considera 'ativa', 'pendente' (período de graça) e 'trial' como ativas
      * 
      * @param int $user_id ID do usuário
      * @return object|null Assinatura ativa
@@ -58,7 +58,7 @@ class Subscription_model extends CI_Model {
         $this->db->from($this->table);
         $this->db->join('plans', 'plans.id = subscriptions.plan_id');
         $this->db->where('subscriptions.user_id', $user_id);
-        $this->db->where_in('subscriptions.status', ['ativa', 'pendente']); // Incluir pendente (período de graça)
+        $this->db->where_in('subscriptions.status', ['ativa', 'pendente', 'trial']); // Incluir trial
         $this->db->where('subscriptions.data_fim >=', date('Y-m-d'));
         $this->db->order_by('subscriptions.data_fim', 'DESC');
         $this->db->limit(1);
@@ -342,5 +342,232 @@ class Subscription_model extends CI_Model {
     public function count_payment_issues() {
         $this->db->where('status', 'pendente');
         return $this->db->count_all_results($this->table);
+    }
+
+    // ========================================
+    // MÉTODOS DE TRIAL (PERÍODO DE TESTE)
+    // ========================================
+
+    /**
+     * Criar assinatura trial (período de teste gratuito)
+     * 
+     * @param int $user_id ID do usuário
+     * @param int $plan_id ID do plano
+     * @param int $trial_days Dias de trial (padrão: 7)
+     * @return int|bool ID da assinatura criada ou false
+     */
+    public function create_trial($user_id, $plan_id, $trial_days = 7) {
+        $data_inicio = date('Y-m-d');
+        $data_fim = date('Y-m-d', strtotime('+' . $trial_days . ' days'));
+        $trial_ends_at = date('Y-m-d H:i:s', strtotime('+' . $trial_days . ' days'));
+
+        $data = [
+            'user_id' => $user_id,
+            'plan_id' => $plan_id,
+            'status' => 'trial',
+            'is_trial' => 1,
+            'trial_ends_at' => $trial_ends_at,
+            'data_inicio' => $data_inicio,
+            'data_fim' => $data_fim,
+            'stripe_subscription_id' => NULL,
+            'stripe_customer_id' => NULL,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+
+        return $this->create($data);
+    }
+
+    /**
+     * Verificar se usuário já usou trial
+     * 
+     * @param int $user_id ID do usuário
+     * @return bool True se já usou trial
+     */
+    public function has_used_trial($user_id) {
+        $this->db->where('user_id', $user_id);
+        $this->db->where('is_trial', 1);
+        $count = $this->db->count_all_results($this->table);
+
+        return $count > 0;
+    }
+
+    /**
+     * Buscar trial ativo do usuário
+     * 
+     * @param int $user_id ID do usuário
+     * @return object|null Trial ativo
+     */
+    public function get_active_trial($user_id) {
+        $this->db->select('subscriptions.*, plans.nome as plan_nome, plans.tipo as plan_tipo, plans.preco as plan_preco, plans.limite_imoveis as plan_limite_imoveis');
+        $this->db->from($this->table);
+        $this->db->join('plans', 'plans.id = subscriptions.plan_id');
+        $this->db->where('subscriptions.user_id', $user_id);
+        $this->db->where('subscriptions.status', 'trial');
+        $this->db->where('subscriptions.is_trial', 1);
+        $this->db->where('subscriptions.trial_ends_at >=', date('Y-m-d H:i:s'));
+        $this->db->limit(1);
+
+        return $this->db->get()->row();
+    }
+
+    /**
+     * Converter trial para assinatura paga
+     * 
+     * @param int $subscription_id ID da assinatura trial
+     * @param string $stripe_subscription_id ID da assinatura no Stripe
+     * @param string $stripe_customer_id ID do cliente no Stripe
+     * @param int $billing_days Dias de cobrança (padrão: 30)
+     * @return bool Sucesso
+     */
+    public function convert_trial_to_paid($subscription_id, $stripe_subscription_id, $stripe_customer_id, $billing_days = 30) {
+        $data_inicio = date('Y-m-d');
+        $data_fim = date('Y-m-d', strtotime('+' . $billing_days . ' days'));
+
+        $data = [
+            'status' => 'ativa',
+            'is_trial' => 0,
+            'converted_from_trial' => 1,
+            'converted_at' => date('Y-m-d H:i:s'),
+            'stripe_subscription_id' => $stripe_subscription_id,
+            'stripe_customer_id' => $stripe_customer_id,
+            'data_inicio' => $data_inicio,
+            'data_fim' => $data_fim,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        return $this->update($subscription_id, $data);
+    }
+
+    /**
+     * Buscar trials expirando em X dias
+     * 
+     * @param int $days Dias até expiração (padrão: 3)
+     * @return array Lista de trials expirando
+     */
+    public function get_trials_expiring_soon($days = 3) {
+        $date_limit = date('Y-m-d H:i:s', strtotime('+' . $days . ' days'));
+
+        $this->db->select('subscriptions.*, users.nome, users.email, plans.nome as plan_nome, plans.preco as plan_preco');
+        $this->db->from($this->table);
+        $this->db->join('users', 'users.id = subscriptions.user_id');
+        $this->db->join('plans', 'plans.id = subscriptions.plan_id');
+        $this->db->where('subscriptions.status', 'trial');
+        $this->db->where('subscriptions.is_trial', 1);
+        $this->db->where('subscriptions.trial_ends_at <=', $date_limit);
+        $this->db->where('subscriptions.trial_ends_at >=', date('Y-m-d H:i:s'));
+        $this->db->order_by('subscriptions.trial_ends_at', 'ASC');
+
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Buscar trials expirados (não convertidos)
+     * 
+     * @return array Lista de trials expirados
+     */
+    public function get_expired_trials() {
+        $this->db->select('subscriptions.*, users.nome, users.email, plans.nome as plan_nome');
+        $this->db->from($this->table);
+        $this->db->join('users', 'users.id = subscriptions.user_id');
+        $this->db->join('plans', 'plans.id = subscriptions.plan_id');
+        $this->db->where('subscriptions.status', 'trial');
+        $this->db->where('subscriptions.is_trial', 1);
+        $this->db->where('subscriptions.trial_ends_at <', date('Y-m-d H:i:s'));
+        $this->db->order_by('subscriptions.trial_ends_at', 'DESC');
+
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Expirar trials vencidos (executar via cron)
+     * 
+     * @return int Número de trials expirados
+     */
+    public function expire_trials() {
+        $this->db->where('status', 'trial');
+        $this->db->where('is_trial', 1);
+        $this->db->where('trial_ends_at <', date('Y-m-d H:i:s'));
+        $this->db->update($this->table, [
+            'status' => 'expirada',
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+
+        return $this->db->affected_rows();
+    }
+
+    /**
+     * Cancelar trial
+     * 
+     * @param int $subscription_id ID da assinatura
+     * @return bool Sucesso
+     */
+    public function cancel_trial($subscription_id) {
+        return $this->update($subscription_id, [
+            'status' => 'cancelada',
+            'cancelada_em' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    /**
+     * Verificar se trial está expirando em breve
+     * 
+     * @param int $subscription_id ID da assinatura
+     * @param int $days Dias de antecedência (padrão: 3)
+     * @return bool True se está expirando em breve
+     */
+    public function is_trial_expiring_soon($subscription_id, $days = 3) {
+        $subscription = $this->get_by_id($subscription_id);
+
+        if (!$subscription || !$subscription->is_trial) {
+            return false;
+        }
+
+        $trial_ends = strtotime($subscription->trial_ends_at);
+        $limit_date = strtotime('+' . $days . ' days');
+
+        return $trial_ends <= $limit_date && $trial_ends >= time();
+    }
+
+    /**
+     * Contar trials ativos
+     * 
+     * @return int Total de trials ativos
+     */
+    public function count_active_trials() {
+        $this->db->where('status', 'trial');
+        $this->db->where('is_trial', 1);
+        $this->db->where('trial_ends_at >=', date('Y-m-d H:i:s'));
+        return $this->db->count_all_results($this->table);
+    }
+
+    /**
+     * Contar conversões de trial
+     * 
+     * @return int Total de trials convertidos
+     */
+    public function count_trial_conversions() {
+        $this->db->where('converted_from_trial', 1);
+        return $this->db->count_all_results($this->table);
+    }
+
+    /**
+     * Calcular taxa de conversão de trial
+     * 
+     * @return float Taxa de conversão (0-100)
+     */
+    public function get_trial_conversion_rate() {
+        // Total de trials (ativos + expirados + convertidos)
+        $this->db->where('is_trial', 1);
+        $total_trials = $this->db->count_all_results($this->table);
+
+        if ($total_trials == 0) {
+            return 0;
+        }
+
+        // Total de conversões
+        $conversions = $this->count_trial_conversions();
+
+        return ($conversions / $total_trials) * 100;
     }
 }

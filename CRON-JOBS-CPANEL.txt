@@ -1,0 +1,107 @@
+========================================
+CRON JOBS PARA CPANEL - ConectCorretores
+========================================
+
+Autor: Rafael Dias - doisr.com.br
+Data: 08/11/2025
+
+========================================
+PASSO 1: GERAR TOKEN
+========================================
+
+Execute no terminal:
+php -r "echo bin2hex(random_bytes(32));"
+
+Ou execute o script:
+scripts/windows/gerar-token-cron.bat
+
+Copie o token gerado e adicione em:
+application/config/config.php
+
+$config['cron_token'] = 'SEU_TOKEN_AQUI';
+
+========================================
+PASSO 2: CONFIGURAR CRON JOBS
+========================================
+
+IMPORTANTE: Substitua "SEU_TOKEN_AQUI" pelo token real gerado!
+
+----------------------------------------
+CRON JOB 1: Processar Trials Expirados
+----------------------------------------
+Frequência: Diariamente às 2h da manhã
+Minuto: 0
+Hora: 2
+Dia: *
+Mês: *
+Dia da semana: *
+
+Comando:
+wget -q -O - "https://conectcorretores.doisr.com.br/cron/process_expired_trials?token=SEU_TOKEN_AQUI" >/dev/null 2>&1
+
+----------------------------------------
+CRON JOB 2: Enviar Lembretes de Trial
+----------------------------------------
+Frequência: Diariamente às 10h da manhã
+Minuto: 0
+Hora: 10
+Dia: *
+Mês: *
+Dia da semana: *
+
+Comando:
+wget -q -O - "https://conectcorretores.doisr.com.br/cron/send_trial_reminders?token=SEU_TOKEN_AQUI" >/dev/null 2>&1
+
+----------------------------------------
+CRON JOB 3: Estatísticas (OPCIONAL)
+----------------------------------------
+Frequência: Semanalmente (segunda-feira às 9h)
+Minuto: 0
+Hora: 9
+Dia: *
+Mês: *
+Dia da semana: 1
+
+Comando:
+wget -q -O - "https://conectcorretores.doisr.com.br/cron/trial_stats?token=SEU_TOKEN_AQUI" > /home/conectcorretores/logs/trial_stats.log 2>&1
+
+========================================
+PASSO 3: REMOVER CRON JOB ANTIGO
+========================================
+
+EXCLUIR este cron job (gestao.doisr.com.br):
+wget https://gestao.doisr.com.br/cronjob
+
+Este é de outro projeto!
+
+========================================
+PASSO 4: TESTAR
+========================================
+
+Após configurar, teste manualmente acessando no navegador:
+
+https://conectcorretores.doisr.com.br/cron/process_expired_trials?token=SEU_TOKEN_AQUI
+https://conectcorretores.doisr.com.br/cron/send_trial_reminders?token=SEU_TOKEN_AQUI
+https://conectcorretores.doisr.com.br/cron/trial_stats?token=SEU_TOKEN_AQUI
+
+Você deve ver o output do cron job na tela.
+
+========================================
+RESUMO RÁPIDO
+========================================
+
+1. Gerar token: php -r "echo bin2hex(random_bytes(32));"
+2. Adicionar em config.php: $config['cron_token'] = 'TOKEN';
+3. Excluir cron job do gestao.doisr.com.br
+4. Adicionar 2 novos cron jobs (trials)
+5. Testar via browser
+
+========================================
+SUPORTE
+========================================
+
+Documentação completa:
+docs/desenvolvimento/CRON-TRIAL.md
+docs/desenvolvimento/TRIAL-SISTEMA.md
+
+Dúvidas: doisr.sistemas@gmail.com
