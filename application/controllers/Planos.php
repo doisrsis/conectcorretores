@@ -680,12 +680,16 @@ class Planos extends CI_Controller {
         $subscription = $this->Subscription_model->get_by_stripe_id($stripe_subscription_id);
 
         if ($subscription) {
+            // Carregar helper de configurações
+            $this->load->helper('settings');
+            
             // Contar tentativas de pagamento
             $attempt_count = isset($invoice->attempt_count) ? $invoice->attempt_count : 1;
             
-            // Calcular dias até cancelamento (baseado nas configurações do Stripe)
-            // Por padrão, Stripe tenta 4 vezes em ~2 semanas
-            $days_until_cancel = 14 - ($attempt_count * 3);
+            // Calcular dias até cancelamento (baseado nas configurações)
+            $grace_period = grace_period_days(); // Da configuração
+            $retry_interval = retry_interval_days(); // Da configuração
+            $days_until_cancel = $grace_period - ($attempt_count * $retry_interval);
             if ($days_until_cancel < 0) $days_until_cancel = 0;
             
             // Atualizar assinatura
