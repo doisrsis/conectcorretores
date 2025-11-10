@@ -202,6 +202,12 @@ class Settings extends CI_Controller {
                 redirect('settings/cupons_create');
             }
             
+            // Validar duração "forever" apenas para cupons percentuais (limitação do Stripe)
+            if ($coupon_data['tipo'] === 'fixed' && $coupon_data['duracao'] === 'forever') {
+                $this->session->set_flashdata('error', 'Cupons de valor fixo não podem ter duração "Para Sempre". Use "Uma Vez" ou "Recorrente".');
+                redirect('settings/cupons_create');
+            }
+            
             // Criar cupom no Stripe
             $stripe_result = $this->stripe_lib->create_coupon($coupon_data);
             

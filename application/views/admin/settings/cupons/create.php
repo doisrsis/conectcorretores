@@ -95,30 +95,35 @@
                     </div>
 
                     <!-- Duração -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="duracao" class="block text-sm font-medium text-gray-700 mb-2">
-                                Duração do Desconto *
-                            </label>
-                            <select id="duracao" name="duracao" required class="input-field" onchange="toggleDuracaoMeses()">
-                                <option value="once" <?php echo set_select('duracao', 'once', true); ?>>Uma vez (primeiro pagamento)</option>
-                                <option value="repeating" <?php echo set_select('duracao', 'repeating'); ?>>Recorrente (N meses)</option>
-                                <option value="forever" <?php echo set_select('duracao', 'forever'); ?>>Para sempre</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label for="duracao" class="block text-sm font-medium text-gray-700 mb-2">
+                            Duração *
+                        </label>
+                        <select id="duracao" 
+                                name="duracao" 
+                                required
+                                onchange="toggleDuracaoMeses()"
+                                class="input-field">
+                            <option value="once" <?php echo set_select('duracao', 'once', true); ?>>Uma Vez (primeiro pagamento)</option>
+                            <option value="repeating" <?php echo set_select('duracao', 'repeating'); ?>>Recorrente (N meses)</option>
+                            <option value="forever" <?php echo set_select('duracao', 'forever'); ?>>Para Sempre</option>
+                        </select>
+                        <p class="text-xs text-yellow-600 mt-1">
+                            ⚠️ <strong>Nota:</strong> A opção "Para Sempre" só está disponível para cupons percentuais (limitação do Stripe).
+                        </p>
+                    </div>
 
-                        <div id="duracao-meses-wrapper" style="display: none;">
-                            <label for="duracao_meses" class="block text-sm font-medium text-gray-700 mb-2">
-                                Quantidade de Meses
-                            </label>
-                            <input type="number" 
-                                   id="duracao_meses" 
-                                   name="duracao_meses" 
-                                   min="1"
-                                   placeholder="Ex: 3"
-                                   class="input-field"
-                                   value="<?php echo set_value('duracao_meses'); ?>">
-                        </div>
+                    <div id="duracao-meses-wrapper" style="display: none;">
+                        <label for="duracao_meses" class="block text-sm font-medium text-gray-700 mb-2">
+                            Quantidade de Meses
+                        </label>
+                        <input type="number" 
+                               id="duracao_meses" 
+                               name="duracao_meses" 
+                               min="1"
+                               placeholder="Ex: 3"
+                               class="input-field"
+                               value="<?php echo set_value('duracao_meses'); ?>">
                     </div>
 
                     <!-- Limite de Usos -->
@@ -232,15 +237,26 @@ function updateValorLabel() {
     const tipo = document.getElementById('tipo').value;
     const label = document.getElementById('valor-label');
     const input = document.getElementById('valor');
+    const duracaoSelect = document.getElementById('duracao');
+    const foreverOption = duracaoSelect.querySelector('option[value="forever"]');
     
     if (tipo === 'percent') {
         label.textContent = 'Valor do Desconto (%) *';
         input.placeholder = 'Ex: 20';
         input.max = '100';
+        // Habilitar opção "Para Sempre" para cupons percentuais
+        foreverOption.disabled = false;
     } else {
         label.textContent = 'Valor do Desconto (R$) *';
         input.placeholder = 'Ex: 10.00';
         input.removeAttribute('max');
+        // Desabilitar opção "Para Sempre" para cupons fixos (limitação do Stripe)
+        foreverOption.disabled = true;
+        // Se estava selecionado "Para Sempre", mudar para "Uma Vez"
+        if (duracaoSelect.value === 'forever') {
+            duracaoSelect.value = 'once';
+            toggleDuracaoMeses();
+        }
     }
 }
 
