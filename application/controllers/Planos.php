@@ -262,13 +262,54 @@ class Planos extends CI_Controller {
             ]);
         }
 
-        // Criar sessão de checkout
-        $result = $this->stripe_lib->create_checkout_session($plan->stripe_price_id, [
-            'user_id' => $user_id,
-            'email' => $user->email,
-            'plan_id' => $plan_id,
-            'is_upgrade' => isset($is_upgrade) ? $is_upgrade : false
-        ]);
+        // Verificar se tem cupom
+        $coupon_code = $this->input->post('coupon_code');
+        
+        // Criar sessão de checkout (com ou sem cupom)
+        if ($coupon_code) {
+            // Validar cupom antes de usar
+            $this->load->model('Coupon_model');
+            $validation = $this->Coupon_model->validate($coupon_code, $user_id);
+            
+            if (!$validation['valid']) {
+                echo json_encode(['success' => false, 'error' => 'Cupom inválido: ' . $validation['message']]);
+                return;
+            }
+            
+            // Criar checkout com cupom
+            $result = $this->stripe_lib->create_checkout_session_with_coupon($plan->stripe_price_id, [
+                'user_id' => $user_id,
+                'email' => $user->email,
+                'plan_id' => $plan_id,
+                'is_upgrade' => isset($is_upgrade) ? $is_upgrade : false,
+                'success_url' => base_url('planos/sucesso?session_id={CHECKOUT_SESSION_ID}'),
+                'cancel_url' => base_url('planos')
+            ], $coupon_code);
+            
+            // Se sucesso, registrar uso do cupom
+            if ($result['success']) {
+                $coupon = $validation['coupon'];
+                $discount_calc = $this->Coupon_model->calculate_discount($coupon, $plan->preco);
+                
+                // Registrar uso (subscription_id será atualizado depois via webhook)
+                $this->Coupon_model->register_usage(
+                    $coupon->id,
+                    $user_id,
+                    null, // subscription_id será preenchido depois
+                    $discount_calc['desconto'],
+                    $plan->preco,
+                    $discount_calc['valor_final']
+                );
+            }
+        } else {
+            // Criar checkout sem cupom
+            $result = $this->stripe_lib->create_checkout_session($plan->stripe_price_id, [
+                'user_id' => $user_id,
+                'email' => $user->email,
+                'plan_id' => $plan_id,
+                'is_upgrade' => isset($is_upgrade) ? $is_upgrade : false
+            ]);
+        }
 
         echo json_encode($result);
     }

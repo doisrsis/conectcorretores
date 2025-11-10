@@ -340,8 +340,77 @@
     <?php $this->load->view('templates/footer'); ?>
 </div>
 
+<!-- Modal de Cupom -->
+<div id="couponModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative">
+        <button onclick="fecharModalCupom()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+        
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">🎟️ Tem um cupom?</h3>
+        <p class="text-gray-600 mb-6">Digite o código do cupom para aplicar o desconto</p>
+        
+        <div class="space-y-4">
+            <div>
+                <label for="coupon-code" class="block text-sm font-medium text-gray-700 mb-2">
+                    Código do Cupom
+                </label>
+                <div class="flex gap-2">
+                    <input type="text" 
+                           id="coupon-code" 
+                           placeholder="Ex: BEMVINDO"
+                           class="flex-1 input-field uppercase"
+                           maxlength="50">
+                    <button onclick="validarCupom()" 
+                            id="validate-coupon-btn"
+                            class="btn-primary px-6">
+                        Validar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mensagem de validação -->
+            <div id="coupon-message" class="hidden"></div>
+            
+            <!-- Resumo do desconto -->
+            <div id="coupon-summary" class="hidden bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-green-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-green-900">Cupom aplicado!</p>
+                        <p class="text-sm text-green-700 mt-1" id="discount-details"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botões -->
+            <div class="flex gap-3 pt-4">
+                <button onclick="prosseguirSemCupom()" class="flex-1 btn-outline">
+                    Prosseguir sem cupom
+                </button>
+                <button onclick="prosseguirComCupom()" 
+                        id="proceed-with-coupon-btn"
+                        class="flex-1 btn-primary"
+                        disabled>
+                    Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User ID para validação de cupom -->
+<div data-user-id="<?php echo $this->session->userdata('user_id'); ?>" style="display:none;"></div>
+
 <!-- Stripe.js -->
 <script src="https://js.stripe.com/v3/"></script>
+
+<!-- Script de Cupom -->
+<script src="<?php echo base_url('assets/js/coupon-checkout.js?v=1.7.3'); ?>"></script>
 
 <!-- Script de Checkout -->
 <script>
@@ -349,48 +418,21 @@
 const stripe = Stripe('<?php echo $this->config->item('stripe_public_key'); ?>');
 const baseUrl = '<?php echo base_url(); ?>';
 
-// Função para iniciar checkout (nova assinatura)
+// Função para iniciar checkout (nova assinatura) - MODIFICADA PARA CUPOM
 async function iniciarCheckout(planId) {
-    const button = document.querySelector(`[data-plan-id="${planId}"]`);
+    // Salvar planId e abrir modal de cupom
+    currentPlanId = planId;
     
-    // Desabilitar botão e mostrar loading
-    button.disabled = true;
-    button.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processando...';
-    
-    try {
-        // Criar sessão de checkout
-        const response = await fetch(baseUrl + 'planos/criar_checkout_session', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `plan_id=${planId}`
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            // Redirecionar para checkout do Stripe
-            const result = await stripe.redirectToCheckout({
-                sessionId: data.session_id
-            });
-            
-            if (result.error) {
-                alert('Erro: ' + result.error.message);
-                button.disabled = false;
-                button.innerHTML = 'Assinar Agora';
-            }
-        } else {
-            alert('Erro: ' + data.error);
-            button.disabled = false;
-            button.innerHTML = 'Assinar Agora';
-        }
-    } catch (error) {
-        console.error('Erro:', error);
-        alert('Erro ao processar pagamento. Tente novamente.');
-        button.disabled = false;
-        button.innerHTML = 'Assinar Agora';
+    // Buscar preço do plano
+    const planCard = document.querySelector(`[data-plan-id="${planId}"]`).closest('.bg-white');
+    const priceElement = planCard.querySelector('.text-4xl, .text-5xl');
+    if (priceElement) {
+        const priceText = priceElement.textContent;
+        currentPlanPrice = parseFloat(priceText.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
     }
+    
+    // Abrir modal de cupom
+    abrirModalCupom();
 }
 
 // Função para fazer upgrade

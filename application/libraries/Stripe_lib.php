@@ -319,4 +319,200 @@ class Stripe_lib {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+    
+    // ========================================
+    // MÉTODOS DE CUPONS
+    // ========================================
+    
+    /**
+     * Criar cupom no Stripe
+     * 
+     * @param array $data Dados do cupom
+     * @return array
+     */
+    public function create_coupon($data) {
+        try {
+            $coupon_data = [];
+            
+            // Tipo de desconto
+            if ($data['tipo'] === 'percent') {
+                $coupon_data['percent_off'] = $data['valor'];
+            } else {
+                $coupon_data['amount_off'] = $data['valor'] * 100; // Converter para centavos
+                $coupon_data['currency'] = 'brl';
+            }
+            
+            // Duração
+            $coupon_data['duration'] = $data['duracao'];
+            if ($data['duracao'] === 'repeating' && isset($data['duracao_meses'])) {
+                $coupon_data['duration_in_months'] = $data['duracao_meses'];
+            }
+            
+            // ID/Nome do cupom
+            if (isset($data['codigo'])) {
+                $coupon_data['id'] = strtoupper($data['codigo']);
+            }
+            
+            // Criar cupom
+            $coupon = \Stripe\Coupon::create($coupon_data);
+            
+            return ['success' => true, 'coupon' => $coupon];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Buscar cupom no Stripe
+     * 
+     * @param string $coupon_id
+     * @return array
+     */
+    public function get_coupon($coupon_id) {
+        try {
+            $coupon = \Stripe\Coupon::retrieve($coupon_id);
+            return ['success' => true, 'coupon' => $coupon];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Atualizar cupom no Stripe
+     * 
+     * @param string $coupon_id
+     * @param array $data
+     * @return array
+     */
+    public function update_coupon($coupon_id, $data) {
+        try {
+            // Stripe só permite atualizar metadata de cupons
+            $update_data = [];
+            if (isset($data['metadata'])) {
+                $update_data['metadata'] = $data['metadata'];
+            }
+            
+            $coupon = \Stripe\Coupon::update($coupon_id, $update_data);
+            
+            return ['success' => true, 'coupon' => $coupon];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Deletar cupom no Stripe
+     * 
+     * @param string $coupon_id
+     * @return array
+     */
+    public function delete_coupon($coupon_id) {
+        try {
+            $coupon = \Stripe\Coupon::retrieve($coupon_id);
+            $coupon->delete();
+            
+            return ['success' => true];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Listar todos os cupons do Stripe
+     * 
+     * @param int $limit
+     * @return array
+     */
+    public function list_coupons($limit = 100) {
+        try {
+            $coupons = \Stripe\Coupon::all(['limit' => $limit]);
+            return ['success' => true, 'coupons' => $coupons->data];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Criar sessão de checkout com cupom
+     * 
+     * @param string $stripe_price_id
+     * @param array $user_data
+     * @param string $coupon_code
+     * @return array
+     */
+    public function create_checkout_session_with_coupon($stripe_price_id, $user_data, $coupon_code) {
+        try {
+            $session_data = [
+                'payment_method_types' => $this->CI->config->item('stripe_payment_methods'),
+                'line_items' => [[
+                    'price' => $stripe_price_id,
+                    'quantity' => 1,
+                ]],
+                'mode' => 'subscription',
+                'success_url' => $user_data['success_url'],
+                'cancel_url' => $user_data['cancel_url'],
+                'client_reference_id' => $user_data['user_id'],
+                'customer_email' => $user_data['email'],
+                'metadata' => [
+                    'user_id' => $user_data['user_id'],
+                    'plan_id' => $user_data['plan_id']
+                ],
+                // Adicionar cupom
+                'discounts' => [[
+                    'coupon' => strtoupper($coupon_code)
+                ]]
+            ];
+            
+            $session = \Stripe\Checkout\Session::create($session_data);
+            
+            return ['success' => true, 'session_id' => $session->id, 'session' => $session];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Aplicar cupom em assinatura existente
+     * 
+     * @param string $subscription_id
+     * @param string $coupon_code
+     * @return array
+     */
+    public function apply_coupon_to_subscription($subscription_id, $coupon_code) {
+        try {
+            $subscription = \Stripe\Subscription::update($subscription_id, [
+                'coupon' => strtoupper($coupon_code)
+            ]);
+            
+            return ['success' => true, 'subscription' => $subscription];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Remover cupom de assinatura
+     * 
+     * @param string $subscription_id
+     * @return array
+     */
+    public function remove_coupon_from_subscription($subscription_id) {
+        try {
+            $subscription = \Stripe\Subscription::update($subscription_id, [
+                'coupon' => ''
+            ]);
+            
+            return ['success' => true, 'subscription' => $subscription];
+            
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }

@@ -34,6 +34,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
            class="<?php echo $active_tab === 'sistema' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'; ?> whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
             ⚙️ Sistema
         </a>
+        <a href="<?php echo base_url('settings/cupons'); ?>" 
+           class="<?php echo $active_tab === 'cupons' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'; ?> whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+            🎟️ Cupons
+        </a>
         <a href="<?php echo base_url('settings/todas'); ?>" 
            class="<?php echo $active_tab === 'todas' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'; ?> whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
             📋 Todas
