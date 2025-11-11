@@ -141,7 +141,7 @@ class Imoveis extends CI_Controller {
         $data['title'] = 'Detalhes do Imóvel - ConectCorretores';
         $data['page'] = 'imoveis';
 
-        $this->load->view('imoveis/ver', $data);
+        $this->load->view('imoveis/ver_tabler', $data);
     }
 
     /**
@@ -168,7 +168,7 @@ class Imoveis extends CI_Controller {
         $data['page'] = 'imoveis';
         // Não passar $data['imovel'] para indicar que é criação
 
-        $this->load->view('imoveis/form', $data);
+        $this->load->view('imoveis/form_wizard', $data);
     }
 
 
@@ -275,7 +275,7 @@ class Imoveis extends CI_Controller {
         $data['title'] = 'Editar Imóvel - ConectCorretores';
         $data['page'] = 'imoveis';
 
-        $this->load->view('imoveis/form', $data);
+        $this->load->view('imoveis/form_wizard', $data);
     }
 
     /**
@@ -445,6 +445,58 @@ class Imoveis extends CI_Controller {
         }
 
         redirect('imoveis');
+    }
+
+    /**
+     * Marcar imóvel como vendido
+     */
+    public function marcar_vendido($id) {
+        $user_id = $this->session->userdata('user_id');
+        $role = $this->session->userdata('role');
+
+        $imovel = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
+
+        if (!$imovel) {
+            $this->session->set_flashdata('error', 'Imóvel não encontrado.');
+            redirect('imoveis');
+            return;
+        }
+
+        $data_update = [
+            'status_publicacao' => 'inativo_vendido',
+            'ativo' => 0
+        ];
+
+        $this->Imovel_model->update($id, $data_update);
+        
+        $this->session->set_flashdata('success', 'Imóvel marcado como vendido!');
+        redirect('imoveis/ver/' . $id);
+    }
+
+    /**
+     * Marcar imóvel como alugado
+     */
+    public function marcar_alugado($id) {
+        $user_id = $this->session->userdata('user_id');
+        $role = $this->session->userdata('role');
+
+        $imovel = $this->Imovel_model->get_by_id($id, $role === 'admin' ? null : $user_id);
+
+        if (!$imovel) {
+            $this->session->set_flashdata('error', 'Imóvel não encontrado.');
+            redirect('imoveis');
+            return;
+        }
+
+        $data_update = [
+            'status_publicacao' => 'inativo_alugado',
+            'ativo' => 0
+        ];
+
+        $this->Imovel_model->update($id, $data_update);
+        
+        $this->session->set_flashdata('success', 'Imóvel marcado como alugado!');
+        redirect('imoveis/ver/' . $id);
     }
 
     /**
