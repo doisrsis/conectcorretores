@@ -18,6 +18,7 @@ class Cron extends CI_Controller {
         $this->load->model('Subscription_model');
         $this->load->model('Plan_model');
         $this->load->model('User_model');
+        $this->load->model('Imovel_model');
         
         // Carregar libraries
         $this->load->library('stripe_lib');
@@ -698,5 +699,220 @@ class Cron extends CI_Controller {
         }
 
         echo "\n=== Fim ===\n";
+    }
+
+    // ========================================
+    // CRON JOBS DE VALIDAÇÃO DE IMÓVEIS (60 DIAS)
+    // ========================================
+
+    /**
+     * Enviar validações de imóveis (60 dias)
+     * 
+     * Executar diariamente via cron:
+     * 0 9 * * * curl https://conectcorretores.doisr.com.br/cron/send_imovel_validations?token=SEU_TOKEN
+     * 
+     * Ou configurar no cPanel:
+     * 0 9 * * * wget -q -O - "https://conectcorretores.doisr.com.br/cron/send_imovel_validations?token=SEU_TOKEN" >/dev/null 2>&1
+     */
+    public function send_imovel_validations() {
+        // Verificar token
+        if (!$this->_is_cli() && !$this->_verify_cron_token()) {
+            show_404();
+            return;
+        }
+
+        $start_time = microtime(true);
+        
+        echo "=== Enviar Validações de Imóveis (60 dias) ===\n";
+        echo "Início: " . date('Y-m-d H:i:s') . "\n\n";
+
+        // Buscar imóveis que precisam validação
+        $imoveis = $this->Imovel_model->get_imoveis_para_validacao();
+        
+        echo "Total de imóveis para validar: " . count($imoveis) . "\n\n";
+
+        $sent = 0;
+        $errors = 0;
+
+        foreach ($imoveis as $imovel) {
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            echo "Imóvel ID: {$imovel->id}\n";
+            echo "Tipo: {$imovel->tipo_imovel} para {$imovel->tipo_negocio}\n";
+            echo "Localização: {$imovel->cidade}/{$imovel->estado}\n";
+            echo "Corretor: {$imovel->corretor_nome} ({$imovel->corretor_email})\n";
+            echo "Cadastrado em: " . date('d/m/Y', strtotime($imovel->created_at)) . "\n";
+            echo "Dias desde cadastro: " . floor((time() - strtotime($imovel->created_at)) / 86400) . " dias\n";
+
+            try {
+                // Gerar token único
+                $token = hash('sha256', $imovel->id . time() . uniqid());
+                
+                // Atualizar campos de validação
+                if ($this->Imovel_model->enviar_validacao($imovel->id, $token)) {
+                    echo "✅ Campos de validação atualizados\n";
+                    
+                    // Preparar dados do corretor
+                    $corretor = (object)[
+                        'nome' => $imovel->corretor_nome,
+                        'email' => $imovel->corretor_email
+                    ];
+                    
+                    // Enviar email
+                    if ($this->email_lib->send_imovel_validation($corretor, $imovel, $token)) {
+                        echo "✅ Email de validação enviado\n";
+                        $sent++;
+                    } else {
+                        echo "❌ Falha ao enviar email\n";
+                        $errors++;
+                    }
+                } else {
+                    echo "❌ Erro ao atualizar campos de validação\n";
+                    $errors++;
+                }
+            } catch (Exception $e) {
+                echo "❌ Exceção: {$e->getMessage()}\n";
+                $errors++;
+            }
+
+            echo "\n";
+        }
+
+        $end_time = microtime(true);
+        $duration = round($end_time - $start_time, 2);
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        echo "=== Resumo ===\n";
+        echo "Emails enviados: $sent\n";
+        echo "Erros: $errors\n";
+        echo "Tempo: {$duration}s\n";
+        echo "Fim: " . date('Y-m-d H:i:s') . "\n";
+    }
+
+    /**
+     * Desativar imóveis com validação expirada (72h)
+     * 
+     * Executar a cada 6 horas via cron:
+     * 0 *\/6 * * * curl https://conectcorretores.doisr.com.br/cron/expire_imovel_validations?token=SEU_TOKEN
+     * 
+     * Ou configurar no cPanel:
+     * 0 *\/6 * * * wget -q -O - "https://conectcorretores.doisr.com.br/cron/expire_imovel_validations?token=SEU_TOKEN" >/dev/null 2>&1
+     */
+    public function expire_imovel_validations() {
+        // Verificar token
+        if (!$this->_is_cli() && !$this->_verify_cron_token()) {
+            show_404();
+            return;
+        }
+
+        $start_time = microtime(true);
+        
+        echo "=== Expirar Validações de Imóveis (72h) ===\n";
+        echo "Início: " . date('Y-m-d H:i:s') . "\n\n";
+
+        // Buscar imóveis com validação expirada
+        $imoveis = $this->Imovel_model->get_imoveis_validacao_expirada();
+        
+        echo "Total de imóveis com validação expirada: " . count($imoveis) . "\n\n";
+
+        $desativados = 0;
+        $errors = 0;
+
+        foreach ($imoveis as $imovel) {
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            echo "Imóvel ID: {$imovel->id}\n";
+            echo "Tipo: {$imovel->tipo_imovel} para {$imovel->tipo_negocio}\n";
+            echo "Localização: {$imovel->cidade}/{$imovel->estado}\n";
+            echo "Corretor: {$imovel->corretor_nome} ({$imovel->corretor_email})\n";
+            echo "Validação enviada em: " . date('d/m/Y H:i', strtotime($imovel->validacao_enviada_em)) . "\n";
+            echo "Expirou em: " . date('d/m/Y H:i', strtotime($imovel->validacao_expira_em)) . "\n";
+            
+            $horas_expiradas = floor((time() - strtotime($imovel->validacao_expira_em)) / 3600);
+            echo "Horas desde expiração: {$horas_expiradas}h\n";
+
+            try {
+                // Desativar imóvel
+                if ($this->Imovel_model->desativar_por_validacao_expirada($imovel->id)) {
+                    echo "✅ Imóvel desativado automaticamente\n";
+                    $desativados++;
+                    
+                    // Preparar dados do corretor
+                    $corretor = (object)[
+                        'nome' => $imovel->corretor_nome,
+                        'email' => $imovel->corretor_email
+                    ];
+                    
+                    // Enviar email informando desativação
+                    if ($this->email_lib->send_imovel_desativado($corretor, $imovel)) {
+                        echo "✅ Email de desativação enviado ao corretor\n";
+                    } else {
+                        echo "⚠️ Falha ao enviar email de desativação\n";
+                    }
+                } else {
+                    echo "❌ Erro ao desativar imóvel\n";
+                    $errors++;
+                }
+            } catch (Exception $e) {
+                echo "❌ Exceção: {$e->getMessage()}\n";
+                $errors++;
+            }
+
+            echo "\n";
+        }
+
+        $end_time = microtime(true);
+        $duration = round($end_time - $start_time, 2);
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        echo "=== Resumo ===\n";
+        echo "Imóveis desativados: $desativados\n";
+        echo "Erros: $errors\n";
+        echo "Tempo: {$duration}s\n";
+        echo "Fim: " . date('Y-m-d H:i:s') . "\n";
+    }
+
+    /**
+     * Estatísticas de validação de imóveis
+     * 
+     * Ver relatório:
+     * https://conectcorretores.doisr.com.br/cron/imovel_validation_stats?token=SEU_TOKEN
+     */
+    public function imovel_validation_stats() {
+        // Verificar token
+        if (!$this->_is_cli() && !$this->_verify_cron_token()) {
+            show_404();
+            return;
+        }
+
+        echo "=== Estatísticas de Validação de Imóveis ===\n";
+        echo "Data: " . date('Y-m-d H:i:s') . "\n\n";
+
+        // Buscar estatísticas
+        $stats = $this->Imovel_model->get_stats_validacao();
+
+        echo "📊 IMÓVEIS ATIVOS:\n";
+        echo "  Total: {$stats->total_ativos}\n\n";
+
+        echo "⏰ VALIDAÇÕES:\n";
+        echo "  Precisam validação (60 dias): {$stats->precisam_validacao}\n";
+        echo "  Aguardando resposta (pendentes): {$stats->validacoes_pendentes}\n";
+        echo "  Expiradas (sem resposta): {$stats->validacoes_expiradas}\n";
+        echo "  Confirmados (disponíveis): {$stats->confirmados}\n\n";
+
+        echo "🏠 STATUS DE VENDA:\n";
+        echo "  Vendidos: {$stats->vendidos}\n";
+        echo "  Alugados: {$stats->alugados}\n\n";
+
+        // Calcular taxas
+        $total_validacoes = $stats->confirmados + $stats->vendidos + $stats->alugados;
+        if ($total_validacoes > 0) {
+            $taxa_resposta = round(($total_validacoes / ($total_validacoes + $stats->validacoes_expiradas)) * 100, 2);
+            $taxa_negociacao = round((($stats->vendidos + $stats->alugados) / $total_validacoes) * 100, 2);
+            
+            echo "📈 TAXAS:\n";
+            echo "  Taxa de resposta: {$taxa_resposta}%\n";
+            echo "  Taxa de negociação: {$taxa_negociacao}%\n\n";
+        }
+
+        echo "=== Fim ===\n";
     }
 }

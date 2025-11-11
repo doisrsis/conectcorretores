@@ -434,4 +434,254 @@ class Imovel_model extends CI_Model {
         
         return $this->db->count_all_results($this->table);
     }
+    
+    // ========================================
+    // MÉTODOS DE VALIDAÇÃO DE IMÓVEIS (60 DIAS)
+    // ========================================
+    
+    /**
+     * Buscar imóveis que precisam de validação (60 dias)
+     * 
+     * Critérios:
+     * - Cadastrados há 60 dias ou mais
+     * - Ativos (ativo = 1)
+     * - Status disponível (status_venda = 'disponivel')
+     * - Nunca validados (validacao_enviada_em IS NULL)
+     * 
+     * @return array Lista de imóveis com dados do corretor
+     */
+    public function get_imoveis_para_validacao() {
+        $this->db->select('imoveis.*, users.nome as corretor_nome, users.email as corretor_email, users.telefone as corretor_telefone');
+        $this->db->from($this->table);
+        $this->db->join('users', 'users.id = imoveis.user_id');
+        
+        // Imóveis cadastrados há 60 dias ou mais
+        $this->db->where('DATE(imoveis.created_at) <=', date('Y-m-d', strtotime('-60 days')));
+        
+        // Ativos e disponíveis
+        $this->db->where('imoveis.ativo', 1);
+        $this->db->where('imoveis.status_venda', 'disponivel');
+        
+        // Nunca validados
+        $this->db->where('imoveis.validacao_enviada_em IS NULL');
+        
+        $this->db->order_by('imoveis.created_at', 'ASC');
+        
+        return $this->db->get()->result();
+    }
+    
+    /**
+     * Buscar imóveis com validação expirada (72h sem resposta)
+     * 
+     * Critérios:
+     * - Validação expirada (validacao_expira_em < NOW())
+     * - Não confirmados (validacao_confirmada_em IS NULL)
+     * - Ainda ativos (ativo = 1)
+     * 
+     * @return array Lista de imóveis com dados do corretor
+     */
+    public function get_imoveis_validacao_expirada() {
+        $this->db->select('imoveis.*, users.nome as corretor_nome, users.email as corretor_email');
+        $this->db->from($this->table);
+        $this->db->join('users', 'users.id = imoveis.user_id');
+        
+        // Validação expirada
+        $this->db->where('imoveis.validacao_expira_em <', date('Y-m-d H:i:s'));
+        
+        // Não confirmados
+        $this->db->where('imoveis.validacao_confirmada_em IS NULL');
+        
+        // Ainda ativos
+        $this->db->where('imoveis.ativo', 1);
+        
+        $this->db->order_by('imoveis.validacao_expira_em', 'ASC');
+        
+        return $this->db->get()->result();
+    }
+    
+    /**
+     * Enviar validação (atualizar campos de controle)
+     * 
+     * @param int $imovel_id ID do imóvel
+     * @param string $token Token único de validação
+     * @return bool Sucesso
+     */
+    public function enviar_validacao($imovel_id, $token) {
+        $data = [
+            'validacao_enviada_em' => date('Y-m-d H:i:s'),
+            'validacao_expira_em' => date('Y-m-d H:i:s', strtotime('+72 hours')),
+            'validacao_token' => $token,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->where('id', $imovel_id);
+        return $this->db->update($this->table, $data);
+    }
+    
+    /**
+     * Buscar imóvel por token de validação
+     * 
+     * @param string $token Token de validação
+     * @return object|null Dados do imóvel com corretor
+     */
+    public function get_by_token($token) {
+        $this->db->select('imoveis.*, users.nome as corretor_nome, users.email as corretor_email');
+        $this->db->from($this->table);
+        $this->db->join('users', 'users.id = imoveis.user_id');
+        $this->db->where('imoveis.validacao_token', $token);
+        
+        return $this->db->get()->row();
+    }
+    
+    /**
+     * Confirmar que imóvel ainda está disponível
+     * 
+     * @param string $token Token de validação
+     * @return bool Sucesso
+     */
+    public function confirmar_disponibilidade($token) {
+        // Verificar se token é válido e não expirou
+        $imovel = $this->get_by_token($token);
+        
+        if (!$imovel) {
+            return false;
+        }
+        
+        // Verificar se não expirou
+        if ($imovel->validacao_expira_em && strtotime($imovel->validacao_expira_em) < time()) {
+            return false;
+        }
+        
+        // Confirmar disponibilidade
+        $data = [
+            'validacao_confirmada_em' => date('Y-m-d H:i:s'),
+            'validacao_expira_em' => null,
+            'validacao_token' => null,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->where('validacao_token', $token);
+        return $this->db->update($this->table, $data);
+    }
+    
+    /**
+     * Marcar imóvel como vendido ou alugado
+     * 
+     * @param string $token Token de validação
+     * @param string $status_venda 'vendido' ou 'alugado'
+     * @return bool Sucesso
+     */
+    public function marcar_como_negociado($token, $status_venda) {
+        // Verificar se token é válido
+        $imovel = $this->get_by_token($token);
+        
+        if (!$imovel) {
+            return false;
+        }
+        
+        // Validar status
+        if (!in_array($status_venda, ['vendido', 'alugado'])) {
+            return false;
+        }
+        
+        // Marcar como vendido/alugado e desativar
+        $status_publicacao = $status_venda === 'vendido' ? 'inativo_vendido' : 'inativo_alugado';
+        
+        $data = [
+            'status_venda' => $status_venda,
+            'data_venda' => date('Y-m-d'),
+            'ativo' => 0,
+            'status_publicacao' => $status_publicacao,
+            'validacao_confirmada_em' => date('Y-m-d H:i:s'),
+            'validacao_expira_em' => null,
+            'validacao_token' => null,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->where('validacao_token', $token);
+        return $this->db->update($this->table, $data);
+    }
+    
+    /**
+     * Desativar imóvel por validação expirada
+     * 
+     * @param int $imovel_id ID do imóvel
+     * @return bool Sucesso
+     */
+    public function desativar_por_validacao_expirada($imovel_id) {
+        $data = [
+            'ativo' => 0,
+            'status_publicacao' => 'inativo_por_tempo',
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->where('id', $imovel_id);
+        return $this->db->update($this->table, $data);
+    }
+    
+    /**
+     * Limpar campos de validação ao reativar imóvel
+     * 
+     * @param int $imovel_id ID do imóvel
+     * @return bool Sucesso
+     */
+    public function limpar_validacao($imovel_id) {
+        $data = [
+            'validacao_enviada_em' => null,
+            'validacao_expira_em' => null,
+            'validacao_confirmada_em' => null,
+            'validacao_token' => null,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->where('id', $imovel_id);
+        return $this->db->update($this->table, $data);
+    }
+    
+    /**
+     * Estatísticas de validação de imóveis
+     * 
+     * @return object Estatísticas
+     */
+    public function get_stats_validacao() {
+        $stats = new stdClass();
+        
+        // Total de imóveis ativos
+        $this->db->where('ativo', 1);
+        $stats->total_ativos = $this->db->count_all_results($this->table);
+        
+        // Imóveis que precisam validação (60 dias)
+        $this->db->where('DATE(created_at) <=', date('Y-m-d', strtotime('-60 days')));
+        $this->db->where('ativo', 1);
+        $this->db->where('status_venda', 'disponivel');
+        $this->db->where('validacao_enviada_em IS NULL');
+        $stats->precisam_validacao = $this->db->count_all_results($this->table);
+        
+        // Validações pendentes (aguardando resposta)
+        $this->db->where('validacao_enviada_em IS NOT NULL');
+        $this->db->where('validacao_confirmada_em IS NULL');
+        $this->db->where('validacao_expira_em >', date('Y-m-d H:i:s'));
+        $this->db->where('ativo', 1);
+        $stats->validacoes_pendentes = $this->db->count_all_results($this->table);
+        
+        // Validações expiradas (sem resposta)
+        $this->db->where('validacao_expira_em <', date('Y-m-d H:i:s'));
+        $this->db->where('validacao_confirmada_em IS NULL');
+        $this->db->where('ativo', 1);
+        $stats->validacoes_expiradas = $this->db->count_all_results($this->table);
+        
+        // Imóveis confirmados
+        $this->db->where('validacao_confirmada_em IS NOT NULL');
+        $stats->confirmados = $this->db->count_all_results($this->table);
+        
+        // Imóveis vendidos
+        $this->db->where('status_venda', 'vendido');
+        $stats->vendidos = $this->db->count_all_results($this->table);
+        
+        // Imóveis alugados
+        $this->db->where('status_venda', 'alugado');
+        $stats->alugados = $this->db->count_all_results($this->table);
+        
+        return $stats;
+    }
 }

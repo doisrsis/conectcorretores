@@ -446,6 +446,101 @@ class Email_lib {
         );
     }
 
+    // ========================================
+    // EMAILS DE VALIDAÇÃO DE IMÓVEIS
+    // ========================================
+
+    /**
+     * Enviar email de validação de imóvel (60 dias)
+     * 
+     * @param object $corretor Dados do corretor
+     * @param object $imovel Dados do imóvel
+     * @param string $token Token de validação
+     * @return bool Sucesso no envio
+     */
+    public function send_imovel_validation($corretor, $imovel, $token) {
+        // Formatar endereço completo
+        $endereco_partes = array_filter([
+            $imovel->endereco,
+            $imovel->bairro,
+            $imovel->cidade,
+            $imovel->estado
+        ]);
+        $endereco_completo = implode(', ', $endereco_partes);
+        
+        // Formatar tipo de negócio
+        $tipo_negocio = $imovel->tipo_negocio === 'compra' ? 'Venda' : 'Aluguel';
+        
+        // Calcular data de expiração (72 horas)
+        $expira_em = date('d/m/Y H:i', strtotime('+72 hours'));
+        
+        // Links de ação
+        $link_confirmar = base_url('imoveis/confirmar/' . $token);
+        $link_vendido = base_url('imoveis/vendido/' . $token);
+        $link_alugado = base_url('imoveis/alugado/' . $token);
+        
+        return $this->send(
+            $corretor->email,
+            '⚠️ Validação Necessária - Imóvel #' . $imovel->id,
+            'imovel_validation',
+            [
+                'corretor_nome' => $corretor->nome,
+                'imovel_id' => $imovel->id,
+                'tipo_imovel' => $imovel->tipo_imovel,
+                'tipo_negocio' => $tipo_negocio,
+                'endereco_completo' => $endereco_completo,
+                'preco' => number_format($imovel->preco, 2, ',', '.'),
+                'created_at' => date('d/m/Y', strtotime($imovel->created_at)),
+                'expira_em' => $expira_em,
+                'link_confirmar' => $link_confirmar,
+                'link_vendido' => $link_vendido,
+                'link_alugado' => $link_alugado
+            ]
+        );
+    }
+
+    /**
+     * Enviar email de imóvel desativado por falta de validação
+     * 
+     * @param object $corretor Dados do corretor
+     * @param object $imovel Dados do imóvel
+     * @return bool Sucesso no envio
+     */
+    public function send_imovel_desativado($corretor, $imovel) {
+        // Formatar endereço completo
+        $endereco_partes = array_filter([
+            $imovel->endereco,
+            $imovel->bairro,
+            $imovel->cidade,
+            $imovel->estado
+        ]);
+        $endereco_completo = implode(', ', $endereco_partes);
+        
+        // Formatar tipo de negócio
+        $tipo_negocio = $imovel->tipo_negocio === 'compra' ? 'Venda' : 'Aluguel';
+        
+        // Link para gerenciar imóveis
+        $link_imoveis = base_url('imoveis');
+        
+        return $this->send(
+            $corretor->email,
+            '⚠️ Imóvel Desativado - Falta de Validação #' . $imovel->id,
+            'imovel_desativado',
+            [
+                'corretor_nome' => $corretor->nome,
+                'imovel_id' => $imovel->id,
+                'tipo_imovel' => $imovel->tipo_imovel,
+                'tipo_negocio' => $tipo_negocio,
+                'endereco_completo' => $endereco_completo,
+                'preco' => number_format($imovel->preco, 2, ',', '.'),
+                'created_at' => date('d/m/Y', strtotime($imovel->created_at)),
+                'validacao_enviada_em' => date('d/m/Y H:i', strtotime($imovel->validacao_enviada_em)),
+                'validacao_expira_em' => date('d/m/Y H:i', strtotime($imovel->validacao_expira_em)),
+                'link_imoveis' => $link_imoveis
+            ]
+        );
+    }
+
     /**
      * Renderizar template de email
      * 

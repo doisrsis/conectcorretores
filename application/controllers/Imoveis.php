@@ -65,6 +65,9 @@ class Imoveis extends CI_Controller {
             $filters['search'] = $this->input->get('search');
         }
 
+        // Incluir imóveis inativos no painel do corretor
+        $filters['include_inactive'] = true;
+
         // Buscar imóveis
         $data['imoveis'] = $this->Imovel_model->get_all($filters, $per_page, $offset);
         $data['total'] = $this->Imovel_model->count_all($filters);
@@ -353,13 +356,30 @@ class Imoveis extends CI_Controller {
             }
         }
         
-        // Toggle status_publicacao
+        // Toggle status_publicacao e ativo
         $status_atual = isset($imovel->status_publicacao) ? $imovel->status_publicacao : 'ativo';
         $novo_status = ($status_atual === 'ativo') ? 'inativo_manual' : 'ativo';
         
-        $this->Imovel_model->update($id, [
-            'status_publicacao' => $novo_status
-        ]);
+        $data_update = [
+            'status_publicacao' => $novo_status,
+            'ativo' => ($novo_status === 'ativo') ? 1 : 0
+        ];
+        
+        // Se estiver reativando um imóvel desativado por tempo, limpar campos de validação
+        if ($novo_status === 'ativo' && in_array($status_atual, ['inativo_por_tempo', 'inativo_vendido', 'inativo_alugado'])) {
+            $data_update['validacao_enviada_em'] = null;
+            $data_update['validacao_expira_em'] = null;
+            $data_update['validacao_confirmada_em'] = null;
+            $data_update['validacao_token'] = null;
+            
+            // Se estava vendido/alugado, limpar também
+            if (in_array($status_atual, ['inativo_vendido', 'inativo_alugado'])) {
+                $data_update['status_venda'] = 'disponivel';
+                $data_update['data_venda'] = null;
+            }
+        }
+        
+        $this->Imovel_model->update($id, $data_update);
         
         $mensagem = ($novo_status === 'ativo') ? 'Imóvel ativado com sucesso!' : 'Imóvel desativado com sucesso!';
         $this->session->set_flashdata('success', $mensagem);
@@ -506,5 +526,146 @@ class Imoveis extends CI_Controller {
             'success' => true,
             'estados' => $estados
         ]);
+    }
+
+    // ========================================
+    // MÉTODOS DE VALIDAÇÃO DE IMÓVEIS (60 DIAS)
+    // ========================================
+
+    /**
+     * Confirmar disponibilidade via link do email
+     * 
+     * URL: /imoveis/confirmar/{token}
+     */
+    public function confirmar($token = null) {
+        if (!$token) {
+            $this->session->set_flashdata('error', 'Token de validação não informado.');
+            redirect('dashboard');
+            return;
+        }
+
+        // Buscar imóvel pelo token
+        $imovel = $this->Imovel_model->get_by_token($token);
+
+        if (!$imovel) {
+            $data['title'] = 'Token Inválido';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'token_invalido';
+            $data['mensagem'] = 'O link de validação é inválido ou já foi utilizado.';
+            $this->load->view('imoveis/confirmacao', $data);
+            return;
+        }
+
+        // Verificar se não expirou
+        if ($imovel->validacao_expira_em && strtotime($imovel->validacao_expira_em) < time()) {
+            $data['title'] = 'Prazo Expirado';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'expirado';
+            $data['mensagem'] = 'O prazo de 72 horas para validação já expirou. O imóvel foi desativado automaticamente.';
+            $data['imovel'] = $imovel;
+            $this->load->view('imoveis/confirmacao', $data);
+            return;
+        }
+
+        // Confirmar disponibilidade
+        if ($this->Imovel_model->confirmar_disponibilidade($token)) {
+            $data['title'] = 'Imóvel Confirmado!';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'sucesso_confirmado';
+            $data['mensagem'] = 'Obrigado por confirmar! O imóvel continua ativo e disponível.';
+            $data['imovel'] = $imovel;
+            $this->load->view('imoveis/confirmacao', $data);
+        } else {
+            $data['title'] = 'Erro';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'erro';
+            $data['mensagem'] = 'Ocorreu um erro ao confirmar o imóvel. Tente novamente.';
+            $data['imovel'] = $imovel;
+            $this->load->view('imoveis/confirmacao', $data);
+        }
+    }
+
+    /**
+     * Marcar como vendido via link do email
+     * 
+     * URL: /imoveis/vendido/{token}
+     */
+    public function vendido($token = null) {
+        if (!$token) {
+            $this->session->set_flashdata('error', 'Token de validação não informado.');
+            redirect('dashboard');
+            return;
+        }
+
+        // Buscar imóvel pelo token
+        $imovel = $this->Imovel_model->get_by_token($token);
+
+        if (!$imovel) {
+            $data['title'] = 'Token Inválido';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'token_invalido';
+            $data['mensagem'] = 'O link de validação é inválido ou já foi utilizado.';
+            $this->load->view('imoveis/confirmacao', $data);
+            return;
+        }
+
+        // Marcar como vendido
+        if ($this->Imovel_model->marcar_como_negociado($token, 'vendido')) {
+            $data['title'] = 'Parabéns pela Venda!';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'sucesso_vendido';
+            $data['mensagem'] = 'Parabéns! O imóvel foi marcado como vendido e desativado.';
+            $data['imovel'] = $imovel;
+            $this->load->view('imoveis/confirmacao', $data);
+        } else {
+            $data['title'] = 'Erro';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'erro';
+            $data['mensagem'] = 'Ocorreu um erro ao marcar o imóvel como vendido. Tente novamente.';
+            $data['imovel'] = $imovel;
+            $this->load->view('imoveis/confirmacao', $data);
+        }
+    }
+
+    /**
+     * Marcar como alugado via link do email
+     * 
+     * URL: /imoveis/alugado/{token}
+     */
+    public function alugado($token = null) {
+        if (!$token) {
+            $this->session->set_flashdata('error', 'Token de validação não informado.');
+            redirect('dashboard');
+            return;
+        }
+
+        // Buscar imóvel pelo token
+        $imovel = $this->Imovel_model->get_by_token($token);
+
+        if (!$imovel) {
+            $data['title'] = 'Token Inválido';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'token_invalido';
+            $data['mensagem'] = 'O link de validação é inválido ou já foi utilizado.';
+            $this->load->view('imoveis/confirmacao', $data);
+            return;
+        }
+
+        // Marcar como alugado
+        if ($this->Imovel_model->marcar_como_negociado($token, 'alugado')) {
+            $data['title'] = 'Imóvel Alugado!';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'sucesso_alugado';
+            $data['mensagem'] = 'O imóvel foi marcado como alugado e desativado.';
+            $data['imovel'] = $imovel;
+            $this->load->view('imoveis/confirmacao', $data);
+        } else {
+            $data['title'] = 'Erro';
+            $data['page'] = 'imoveis';
+            $data['tipo'] = 'erro';
+            $data['mensagem'] = 'Ocorreu um erro ao marcar o imóvel como alugado. Tente novamente.';
+            $data['imovel'] = $imovel;
+            $this->load->view('imoveis/confirmacao', $data);
+        }
     }
 }
