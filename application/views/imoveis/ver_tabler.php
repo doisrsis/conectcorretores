@@ -10,6 +10,7 @@ $this->load->view('templates/tabler/header');
 
 <div class="page">
     <?php $this->load->view('templates/tabler/sidebar'); ?>
+    <?php $this->load->view('templates/tabler/navbar'); ?>
     
     <div class="page-wrapper">
         <!-- Page header -->

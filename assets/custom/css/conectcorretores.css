@@ -1,0 +1,337 @@
+/**
+ * ConectCorretores - Customizações Tabler
+ * Autor: Rafael Dias - doisr.com.br
+ * Data: 11/11/2025
+ * Layout: Combo (Centralizado)
+ */
+
+/* ========================================
+   CORES DO BRAND
+   ======================================== */
+:root {
+    --tblr-primary: #667eea;
+    --tblr-primary-rgb: 102, 126, 234;
+    --tblr-primary-darken: #5568d3;
+    --tblr-secondary: #764ba2;
+    --tblr-secondary-rgb: 118, 75, 162;
+}
+
+/* ========================================
+   LOGO
+   ======================================== */
+.navbar-brand-image {
+    max-height: 40px;
+    width: auto;
+}
+
+/* ========================================
+   CARDS DE IMÓVEIS
+   ======================================== */
+.card-imovel {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.card-imovel:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border-color: var(--tblr-primary);
+}
+
+.card-imovel img {
+    height: 200px;
+    object-fit: cover;
+}
+
+/* ========================================
+   BADGES DE STATUS
+   ======================================== */
+.badge-disponivel,
+.badge-ativo {
+    background-color: #10b981;
+    color: white;
+}
+
+.badge-inativo-tempo {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.badge-vendido {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.badge-alugado {
+    background-color: #8b5cf6;
+    color: white;
+}
+
+.badge-inativo-manual {
+    background-color: #6b7280;
+    color: white;
+}
+
+.badge-plano-vencido {
+    background-color: #ef4444;
+    color: white;
+}
+
+.badge-sem-plano {
+    background-color: #f59e0b;
+    color: white;
+}
+
+/* ========================================
+   ANIMAÇÕES
+   ======================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-right {
+    animation: slideInRight 0.4s ease-out;
+}
+
+/* ========================================
+   LOADING STATES
+   ======================================== */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.65;
+}
+
+.btn-loading::after {
+    content: "";
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.5rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ========================================
+   SKELETON LOADING
+   ======================================== */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ========================================
+   FORMULÁRIOS
+   ======================================== */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--tblr-primary);
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+}
+
+.was-validated .form-control:valid,
+.form-control.is-valid {
+    border-color: #10b981;
+}
+
+.was-validated .form-control:invalid,
+.form-control.is-invalid {
+    border-color: #ef4444;
+}
+
+/* ========================================
+   TABELAS
+   ======================================== */
+.table-hover tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+/* ========================================
+   CARDS
+   ======================================== */
+.card {
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ========================================
+   STATS CARDS
+   ======================================== */
+.stats-card {
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stats-card .stats-number {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.stats-card .stats-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stats-card .stats-change {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.stats-card .stats-change.positive {
+    color: #10b981;
+}
+
+.stats-card .stats-change.negative {
+    color: #ef4444;
+}
+
+/* ========================================
+   EMPTY STATES
+   ======================================== */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    opacity: 0.3;
+}
+
+.empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-subtitle {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+}
+
+/* ========================================
+   RESPONSIVIDADE
+   ======================================== */
+@media (max-width: 768px) {
+    .card-imovel img {
+        height: 150px;
+    }
+    
+    .stats-card .stats-number {
+        font-size: 1.5rem;
+    }
+}
+
+/* ========================================
+   DARK MODE ADJUSTMENTS
+   ======================================== */
+/* Esconder/mostrar ícones de tema */
+.hide-theme-dark {
+    display: block;
+}
+
+.hide-theme-light {
+    display: none;
+}
+
+[data-bs-theme="dark"] .hide-theme-dark {
+    display: none;
+}
+
+[data-bs-theme="dark"] .hide-theme-light {
+    display: block;
+}
+
+/* Ajustes visuais dark mode */
+[data-bs-theme="dark"] .card {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .card-header {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .table-hover tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+/* ========================================
+   UTILITÁRIOS
+   ======================================== */
+.text-primary {
+    color: var(--tblr-primary) !important;
+}
+
+.bg-primary {
+    background-color: var(--tblr-primary) !important;
+}
+
+.border-primary {
+    border-color: var(--tblr-primary) !important;
+}
+
+.btn-primary {
+    background-color: var(--tblr-primary);
+    border-color: var(--tblr-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--tblr-primary-darken);
+    border-color: var(--tblr-primary-darken);
+}

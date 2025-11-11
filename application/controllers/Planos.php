@@ -40,10 +40,10 @@ class Planos extends CI_Controller {
 
         // Se estiver logado, carregar com sidebar
         if ($this->session->userdata('logged_in')) {
-            $this->load->view('planos/index', $data);
+            $this->load->view('planos/index_tabler', $data);
         } else {
             // Se não estiver logado, carregar sem sidebar
-            $this->load->view('planos/index_public', $data);
+            $this->load->view('planos/index_public_tabler', $data);
         }
     }
 

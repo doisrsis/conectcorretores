@@ -6,7 +6,7 @@
           </button>
           <h1 class="navbar-brand navbar-brand-autodark">
             <a href="<?php echo base_url(); ?>">
-              <img src="<?php echo base_url('assets/tabler/img/logo_horizontal_branco.png'); ?>" width="180" height="auto" alt="ConectCorretores" class="navbar-brand-image">
+              <img src="<?php echo base_url('assets/tabler/img/logo_horizontal_branco.png'); ?>" width="180" height="180" alt="ConectCorretores" class="navbar-brand-image">
             </a>
           </h1>
           <div class="navbar-nav flex-row d-lg-none">
@@ -37,7 +37,7 @@
                   <span class="nav-link-title">Dashboard</span>
                 </a>
               </li>
-              
+
               <!-- Imóveis -->
               <li class="nav-item dropdown <?php echo (isset($page) && $page == 'imoveis') ? 'active' : ''; ?>">
                 <a class="nav-link dropdown-toggle" href="#navbar-imoveis" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false" >
@@ -59,7 +59,7 @@
                   </div>
                 </div>
               </li>
-              
+
               <!-- Planos -->
               <li class="nav-item <?php echo (isset($page) && $page == 'planos') ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo base_url('planos'); ?>" >
@@ -69,7 +69,7 @@
                   <span class="nav-link-title">Planos</span>
                 </a>
               </li>
-              
+
               <?php if ($this->session->userdata('role') === 'admin'): ?>
               <!-- Separador Admin -->
               <li class="nav-item dropdown">
