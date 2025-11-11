@@ -22,6 +22,8 @@ class Imoveis extends CI_Controller {
 
         // Carregar models
         $this->load->model('Imovel_model');
+        $this->load->library('pagination');
+        $this->load->helper(['url', 'imovel', 'subscription']);
         $this->load->model('User_model');
         $this->load->model('Estado_model');
         $this->load->model('Cidade_model');
@@ -80,11 +82,44 @@ class Imoveis extends CI_Controller {
         $data['tipos_imoveis'] = $this->Imovel_model->get_tipos_imoveis();
         $data['estados'] = $this->Imovel_model->get_estados();
 
+        // Paginação HTML (Tabler style)
+        $config['base_url'] = base_url('imoveis');
+        $config['total_rows'] = $data['total'];
+        $config['per_page'] = $per_page;
+        $config['use_page_numbers'] = FALSE;
+        $config['page_query_string'] = TRUE;
+        $config['query_string_segment'] = 'offset';
+        $config['reuse_query_string'] = TRUE;
+        
+        // Tabler pagination style
+        $config['full_tag_open'] = '<ul class="pagination">';
+        $config['full_tag_close'] = '</ul>';
+        $config['first_link'] = 'Primeira';
+        $config['first_tag_open'] = '<li class="page-item">';
+        $config['first_tag_close'] = '</li>';
+        $config['last_link'] = 'Última';
+        $config['last_tag_open'] = '<li class="page-item">';
+        $config['last_tag_close'] = '</li>';
+        $config['next_link'] = '›';
+        $config['next_tag_open'] = '<li class="page-item">';
+        $config['next_tag_close'] = '</li>';
+        $config['prev_link'] = '‹';
+        $config['prev_tag_open'] = '<li class="page-item">';
+        $config['prev_tag_close'] = '</li>';
+        $config['cur_tag_open'] = '<li class="page-item active"><a class="page-link" href="#">';
+        $config['cur_tag_close'] = '</a></li>';
+        $config['num_tag_open'] = '<li class="page-item">';
+        $config['num_tag_close'] = '</li>';
+        $config['attributes'] = array('class' => 'page-link');
+        
+        $this->pagination->initialize($config);
+        $data['pagination'] = $this->pagination->create_links();
+        
         // Título
         $data['title'] = 'Meus Imóveis - ConectCorretores';
         $data['page'] = 'imoveis';
 
-        $this->load->view('imoveis/index', $data);
+        $this->load->view('imoveis/index_tabler', $data);
     }
 
     /**
