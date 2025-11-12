@@ -67,7 +67,7 @@ class Admin extends CI_Controller {
         $data['page'] = 'admin_dashboard';
 
         // Carregar view
-        $this->load->view('admin/dashboard', $data);
+        $this->load->view('admin/dashboard_tabler', $data);
     }
 
     /**
@@ -233,7 +233,7 @@ class Admin extends CI_Controller {
         $data['title'] = 'Gerenciar Planos - Admin';
         $data['page'] = 'admin_planos';
         
-        $this->load->view('admin/planos/index', $data);
+        $this->load->view('admin/planos/index_tabler', $data);
     }
 
     /**
@@ -262,7 +262,7 @@ class Admin extends CI_Controller {
         $data['title'] = 'Gerenciar Assinaturas - Admin';
         $data['page'] = 'admin_assinaturas';
         
-        $this->load->view('admin/assinaturas', $data);
+        $this->load->view('admin/assinaturas_tabler', $data);
     }
 
     /**
@@ -462,7 +462,7 @@ class Admin extends CI_Controller {
         $data['title'] = 'Editar Plano - Admin';
         $data['page'] = 'admin_planos';
         
-        $this->load->view('admin/planos/editar', $data);
+        $this->load->view('admin/planos/editar_tabler', $data);
     }
     
     /**

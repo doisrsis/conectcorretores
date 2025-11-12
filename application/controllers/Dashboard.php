@@ -20,6 +20,11 @@ class Dashboard extends CI_Controller {
             redirect('login');
         }
 
+        // Se for admin, redirecionar para dashboard admin
+        if ($this->session->userdata('role') === 'admin') {
+            redirect('admin/dashboard');
+        }
+
         // Desabilitar cache do navegador
         $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
         $this->output->set_header('Pragma: no-cache');
