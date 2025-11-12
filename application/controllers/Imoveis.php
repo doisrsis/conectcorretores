@@ -23,6 +23,7 @@ class Imoveis extends CI_Controller {
         // Carregar models
         $this->load->model('Imovel_model');
         $this->load->library('pagination');
+        $this->load->library('log_activity');
         $this->load->helper(['url', 'imovel', 'subscription']);
         $this->load->model('User_model');
         $this->load->model('Estado_model');
@@ -234,6 +235,9 @@ class Imoveis extends CI_Controller {
         $imovel_id = $this->Imovel_model->create($imovel_data);
 
         if ($imovel_id) {
+            // Registrar log
+            $this->log_activity->create('imoveis', $imovel_id, "Criou novo imóvel: {$imovel_data['tipo_imovel']} em {$imovel_data['cidade']}");
+            
             $this->session->set_flashdata('success', 'Imóvel cadastrado com sucesso!');
             redirect('imoveis/ver/' . $imovel_id);
         } else {
@@ -338,6 +342,9 @@ class Imoveis extends CI_Controller {
 
         // Atualizar
         if ($this->Imovel_model->update($id, $imovel_data)) {
+            // Registrar log
+            $this->log_activity->update('imoveis', $id, "Atualizou imóvel: {$imovel_data['tipo_imovel']} em {$imovel_data['cidade']}");
+            
             $this->session->set_flashdata('success', 'Imóvel atualizado com sucesso!');
             redirect('imoveis/ver/' . $id);
         } else {
@@ -416,6 +423,10 @@ class Imoveis extends CI_Controller {
         
         $this->Imovel_model->update($id, $data_update);
         
+        // Registrar log
+        $status_text = ($novo_status === 'ativo') ? 'ativado' : 'desativado';
+        $this->log_activity->status_change('imoveis', $id, $imovel->ativo ? 'ativo' : 'inativo', $novo_status);
+        
         $mensagem = ($novo_status === 'ativo') ? 'Imóvel ativado com sucesso!' : 'Imóvel desativado com sucesso!';
         $this->session->set_flashdata('success', $mensagem);
 
@@ -469,6 +480,9 @@ class Imoveis extends CI_Controller {
 
         $this->Imovel_model->update($id, $data_update);
         
+        // Registrar log
+        $this->log_activity->status_change('imoveis', $id, 'ativo', 'vendido');
+        
         $this->session->set_flashdata('success', 'Imóvel marcado como vendido!');
         redirect('imoveis/ver/' . $id);
     }
@@ -494,6 +508,9 @@ class Imoveis extends CI_Controller {
         ];
 
         $this->Imovel_model->update($id, $data_update);
+        
+        // Registrar log
+        $this->log_activity->status_change('imoveis', $id, 'ativo', 'alugado');
         
         $this->session->set_flashdata('success', 'Imóvel marcado como alugado!');
         redirect('imoveis/ver/' . $id);

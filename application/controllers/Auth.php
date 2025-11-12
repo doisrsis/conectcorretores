@@ -16,6 +16,7 @@ class Auth extends CI_Controller {
         $this->load->model('User_model');
         $this->load->library('form_validation');
         $this->load->library('email_lib');
+        $this->load->library('log_activity');
         $this->load->helper(['url', 'form']);
     }
 
@@ -78,6 +79,9 @@ class Auth extends CI_Controller {
             ];
 
             $this->session->set_userdata($session_data);
+
+            // Registrar log de login
+            $this->log_activity->login($user->id, $user->nome);
 
             // Mensagem de sucesso
             $this->session->set_flashdata('success', 'Login realizado com sucesso! Bem-vindo, ' . $user->nome);
@@ -180,6 +184,14 @@ class Auth extends CI_Controller {
      * Logout
      */
     public function logout() {
+        // Registrar log de logout antes de destruir a sessão
+        if ($this->session->userdata('logged_in')) {
+            $this->log_activity->logout(
+                $this->session->userdata('user_id'),
+                $this->session->userdata('nome')
+            );
+        }
+        
         // Destruir sessão
         $this->session->unset_userdata(['user_id', 'nome', 'email', 'role', 'logged_in']);
         $this->session->sess_destroy();

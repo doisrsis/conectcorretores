@@ -34,6 +34,7 @@ class Admin extends CI_Controller {
         
         // Carregar libraries
         $this->load->library('stripe_lib');
+        $this->load->library('log_activity');
     }
 
     /**
@@ -98,7 +99,35 @@ class Admin extends CI_Controller {
         $data['title'] = 'Gerenciar Usuários - Admin';
         $data['page'] = 'admin_usuarios';
         
-        $this->load->view('admin/usuarios', $data);
+        $this->load->view('admin/usuarios/index_tabler', $data);
+    }
+
+    /**
+     * Ver Detalhes do Usuário
+     */
+    public function ver_usuario($id) {
+        $user = $this->User_model->get_by_id($id);
+        
+        if (!$user) {
+            $this->session->set_flashdata('error', 'Usuário não encontrado.');
+            redirect('admin/usuarios');
+        }
+        
+        $data['user'] = $user;
+        $data['title'] = 'Detalhes do Usuário - Admin';
+        $data['page'] = 'admin_usuarios';
+        
+        // Se for corretor, buscar estatísticas
+        if ($user->role === 'corretor') {
+            $data['stats'] = new stdClass();
+            $data['stats']->total_imoveis = $this->Imovel_model->count_by_user($user->id, ['include_inactive' => true]);
+            $data['stats']->imoveis_ativos = $this->Imovel_model->count_by_user($user->id, ['ativo' => 1]);
+            
+            // Buscar assinatura
+            $data['subscription'] = $this->Subscription_model->get_active_by_user($user->id);
+        }
+        
+        $this->load->view('admin/usuarios/ver_tabler', $data);
     }
 
     /**
@@ -122,7 +151,7 @@ class Admin extends CI_Controller {
         $data['title'] = 'Editar Usuário - Admin';
         $data['page'] = 'admin_usuarios';
         
-        $this->load->view('admin/editar_usuario', $data);
+        $this->load->view('admin/usuarios/editar_tabler', $data);
     }
 
     /**
@@ -136,17 +165,22 @@ class Admin extends CI_Controller {
             $data['user'] = $this->User_model->get_by_id($id);
             $data['title'] = 'Editar Usuário - Admin';
             $data['page'] = 'admin_usuarios';
-            $this->load->view('admin/editar_usuario', $data);
+            $this->load->view('admin/usuarios/editar_tabler', $data);
             return;
         }
         
         $update_data = [
             'nome' => $this->input->post('nome'),
             'telefone' => $this->input->post('telefone'),
+            'whatsapp' => $this->input->post('whatsapp'),
             'ativo' => $this->input->post('ativo'),
         ];
         
         if ($this->User_model->update($id, $update_data)) {
+            // Registrar log
+            $user = $this->User_model->get_by_id($id);
+            $this->log_activity->update('users', $id, "Atualizou dados do usuário: {$user->nome}");
+            
             $this->session->set_flashdata('success', 'Usuário atualizado com sucesso!');
         } else {
             $this->session->set_flashdata('error', 'Erro ao atualizar usuário.');
@@ -165,7 +199,14 @@ class Admin extends CI_Controller {
             redirect('admin/usuarios');
         }
         
+        // Buscar dados do usuário antes de deletar
+        $user = $this->User_model->get_by_id($id);
+        $user_name = $user ? $user->nome : 'Desconhecido';
+        
         if ($this->User_model->delete($id)) {
+            // Registrar log
+            $this->log_activity->delete('users', $id, "Deletou usuário: {$user_name}");
+            
             $this->session->set_flashdata('success', 'Usuário deletado com sucesso!');
         } else {
             $this->session->set_flashdata('error', 'Erro ao deletar usuário.');
@@ -548,5 +589,52 @@ class Admin extends CI_Controller {
         $data['total_valor_pendente'] = $total_valor_pendente;
         
         $this->load->view('admin/inadimplencia', $data);
+    }
+
+    /**
+     * Logs de Atividade
+     */
+    public function logs() {
+        // Carregar model
+        $this->load->model('Activity_log_model');
+        
+        // Paginação
+        $per_page = 50;
+        $offset = $this->input->get('offset') ? (int)$this->input->get('offset') : 0;
+        
+        // Filtros
+        $filters = [];
+        if ($this->input->get('module')) {
+            $filters['module'] = $this->input->get('module');
+        }
+        if ($this->input->get('action')) {
+            $filters['action'] = $this->input->get('action');
+        }
+        if ($this->input->get('date_from')) {
+            $filters['date_from'] = $this->input->get('date_from');
+        }
+        if ($this->input->get('date_to')) {
+            $filters['date_to'] = $this->input->get('date_to');
+        }
+        if ($this->input->get('search')) {
+            $filters['search'] = $this->input->get('search');
+        }
+        
+        // Buscar logs
+        $data['logs'] = $this->Activity_log_model->get_all($filters, $per_page, $offset);
+        $data['total'] = $this->Activity_log_model->count_all($filters);
+        
+        // Estatísticas
+        $data['stats'] = $this->Activity_log_model->get_statistics('today');
+        
+        // Paginação
+        $data['per_page'] = $per_page;
+        $data['offset'] = $offset;
+        
+        // Título
+        $data['title'] = 'Logs de Atividade - Admin';
+        $data['page'] = 'admin_logs';
+        
+        $this->load->view('admin/logs/index_tabler', $data);
     }
 }

@@ -82,8 +82,11 @@
                 <div class="dropdown-menu">
                   <div class="dropdown-menu-columns">
                     <div class="dropdown-menu-column">
-                      <a class="dropdown-item" href="<?php echo base_url('admin/users'); ?>">
+                      <a class="dropdown-item" href="<?php echo base_url('admin/usuarios'); ?>">
                         Usuários
+                      </a>
+                      <a class="dropdown-item" href="<?php echo base_url('admin/logs'); ?>">
+                        Logs de Atividade
                       </a>
                       <a class="dropdown-item" href="<?php echo base_url('settings'); ?>">
                         Configurações
