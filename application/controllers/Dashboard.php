@@ -100,7 +100,7 @@ class Dashboard extends CI_Controller {
         $data['title'] = 'Meu Perfil - ConectCorretores';
         $data['page'] = 'perfil';
 
-        $this->load->view('dashboard/perfil', $data);
+        $this->load->view('dashboard/perfil_tabler', $data);
     }
 
     /**
@@ -130,9 +130,11 @@ class Dashboard extends CI_Controller {
 
         if ($this->form_validation->run() === FALSE) {
             $data['user'] = $this->User_model->get_by_id($user_id);
+            $data['subscription'] = $this->Subscription_model->get_active_by_user($user_id);
+            $data['stats'] = $this->User_model->get_stats($user_id);
             $data['title'] = 'Meu Perfil - ConectCorretores';
             $data['page'] = 'perfil';
-            $this->load->view('dashboard/perfil', $data);
+            $this->load->view('dashboard/perfil_tabler', $data);
             return;
         }
 

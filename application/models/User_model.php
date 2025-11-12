@@ -224,21 +224,25 @@ class User_model extends CI_Model {
     public function get_stats($user_id) {
         $stats = new stdClass();
 
-        // Total de imóveis
+        // Total de imóveis (todos)
         $this->db->where('user_id', $user_id);
-        $this->db->where('ativo', 1);
         $stats->total_imoveis = $this->db->count_all_results('imoveis');
 
-        // Imóveis para venda
+        // Imóveis ativos (status_publicacao = 'ativo')
+        $this->db->where('user_id', $user_id);
+        $this->db->where('status_publicacao', 'ativo');
+        $stats->imoveis_ativos = $this->db->count_all_results('imoveis');
+
+        // Imóveis para venda (ativos)
         $this->db->where('user_id', $user_id);
         $this->db->where('tipo_negocio', 'compra');
-        $this->db->where('ativo', 1);
+        $this->db->where('status_publicacao', 'ativo');
         $stats->imoveis_venda = $this->db->count_all_results('imoveis');
 
-        // Imóveis para aluguel
+        // Imóveis para aluguel (ativos)
         $this->db->where('user_id', $user_id);
         $this->db->where('tipo_negocio', 'aluguel');
-        $this->db->where('ativo', 1);
+        $this->db->where('status_publicacao', 'ativo');
         $stats->imoveis_aluguel = $this->db->count_all_results('imoveis');
 
         // Assinatura ativa
