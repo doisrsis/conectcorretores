@@ -45,161 +45,177 @@ $this->load->view('templates/tabler/header');
         <div class="page-body">
             <div class="container-xl">
                 
-                <!-- Mensagens -->
-                <?php if ($this->session->flashdata('success')): ?>
-                    <div class="alert alert-success alert-dismissible" role="alert">
-                        <div class="d-flex">
-                            <div>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
-                            </div>
-                            <div>
-                                <?php echo $this->session->flashdata('success'); ?>
-                            </div>
-                        </div>
-                        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Card Principal com Informações do Corretor no Topo -->
-                <div class="card mb-3 bg-primary text-white">
+                <!-- Card Principal -->
+                <div class="card mb-3">
                     <div class="card-body">
                         <div class="row align-items-center">
                             <div class="col-auto">
-                                <span class="avatar avatar-lg bg-white text-primary">
-                                    <?php echo strtoupper(substr($imovel->corretor_nome, 0, 2)); ?>
+                                <span class="avatar avatar-xl" style="background-image: url(<?php echo base_url('assets/img/property-placeholder.jpg'); ?>)">
+                                    <?php if (!isset($imovel->imagem_principal)): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l18 0" /><path d="M9 8l1 0" /><path d="M9 12l1 0" /><path d="M9 16l1 0" /><path d="M14 8l1 0" /><path d="M14 12l1 0" /><path d="M14 16l1 0" /><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16" /></svg>
+                                    <?php endif; ?>
                                 </span>
                             </div>
                             <div class="col">
-                                <div class="text-white-50 small">Corretor Responsável</div>
-                                <div class="fw-bold fs-3"><?php echo $imovel->corretor_nome; ?></div>
-                                <div class="text-white-75">
-                                    <?php echo $imovel->corretor_email; ?>
-                                    <?php if ($imovel->corretor_telefone): ?>
-                                        • <?php echo $imovel->corretor_telefone; ?>
+                                <h2 class="mb-1"><?php echo ucfirst($imovel->tipo_imovel); ?> em <?php echo $imovel->bairro; ?></h2>
+                                <div class="text-muted">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" /></svg>
+                                    <?php echo $imovel->bairro; ?> - <?php echo $imovel->cidade; ?>/<?php echo $imovel->estado; ?>
+                                </div>
+                                <div class="mt-2">
+                                    <span class="badge bg-<?php echo $imovel->tipo_negocio === 'compra' ? 'green' : 'blue'; ?>-lt me-1">
+                                        <?php echo ucfirst($imovel->tipo_negocio); ?>
+                                    </span>
+                                    <span class="badge bg-azure-lt me-1">
+                                        <?php echo ucfirst($imovel->tipo_imovel); ?>
+                                    </span>
+                                    <?php if ($imovel->destaque): ?>
+                                        <span class="badge bg-yellow-lt me-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" /></svg>
+                                            Destaque
+                                        </span>
                                     <?php endif; ?>
+                                    <span class="badge bg-<?php echo $imovel->ativo ? 'green' : 'red'; ?>-lt">
+                                        <?php echo $imovel->ativo ? 'Ativo' : 'Inativo'; ?>
+                                    </span>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <div class="text-white-50 small">Cadastrado em</div>
+                                <div class="text-muted small">Cadastrado em</div>
                                 <div class="fw-bold"><?php echo date('d/m/Y', strtotime($imovel->created_at)); ?></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                    <!-- Coluna Principal - Informações -->
-                    <div class="row g-4">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h3 class="card-title">Informações do Imóvel</h3>
+                <!-- Informações e Características -->
+                <div class="row g-3">
+
+                    <!-- Preço -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="subheader">Valor</div>
+                                <div class="h1 mb-0">R$ <?php echo number_format($imovel->preco, 2, ',', '.'); ?></div>
+                                <div class="text-muted mt-1">
+                                    R$ <?php echo number_format($imovel->valor_m2, 2, ',', '.'); ?>/m²
                                 </div>
-                                <div class="card-body">
-                                
-                                <!-- Badges e Título -->
-                                <div class="mb-4">
-                                    <div class="mb-3">
-                                        <span class="badge bg-<?php echo $imovel->tipo_negocio === 'compra' ? 'green' : 'blue'; ?> me-1">
-                                            <?php echo ucfirst($imovel->tipo_negocio); ?>
-                                        </span>
-                                        <span class="badge bg-secondary me-1">
-                                            <?php echo ucfirst($imovel->tipo_imovel); ?>
-                                        </span>
-                                        <?php if ($imovel->destaque): ?>
-                                            <span class="badge bg-yellow me-1">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" /></svg>
-                                                Destaque
-                                            </span>
-                                        <?php endif; ?>
-                                        <span class="badge bg-<?php echo $imovel->ativo ? 'green' : 'red'; ?>">
-                                            <?php echo $imovel->ativo ? 'Ativo' : 'Inativo'; ?>
-                                        </span>
-                                    </div>
-
-                                    <h2 class="mb-2"><?php echo ucfirst($imovel->tipo_imovel); ?> em <?php echo $imovel->bairro; ?></h2>
-                                    
-                                    <div class="text-muted">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" /></svg>
-                                        <?php echo $imovel->bairro; ?> - <?php echo $imovel->cidade; ?>/<?php echo $imovel->estado; ?>
-                                        <?php if ($imovel->cep): ?>
-                                            • CEP: <?php echo $imovel->cep; ?>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-
-                                <div class="row g-4">
-                                    <!-- Preço -->
-                                    <div class="col-md-4">
-                                        <div class="card bg-primary-lt mb-0">
-                                            <div class="card-body">
-                                                <div class="text-muted small mb-1">Valor</div>
-                                                <h2 class="mb-1">R$ <?php echo number_format($imovel->preco, 2, ',', '.'); ?></h2>
-                                                <div class="text-muted small">
-                                                    R$ <?php echo number_format($imovel->valor_m2, 2, ',', '.'); ?>/m²
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Características -->
-                                    <div class="col-md-8">
-                                        <div class="row g-3">
-                                            <div class="col-4">
-                                                <div class="card mb-0">
-                                                    <div class="card-body text-center py-3">
-                                                        <div class="text-muted small mb-1">Área</div>
-                                                        <h3 class="mb-0"><?php echo number_format($imovel->area_privativa, 0, ',', '.'); ?>m²</h3>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <?php if ($imovel->quartos): ?>
-                                            <div class="col-4">
-                                                <div class="card mb-0">
-                                                    <div class="card-body text-center py-3">
-                                                        <div class="text-muted small mb-1">Quartos</div>
-                                                        <h3 class="mb-0"><?php echo $imovel->quartos; ?></h3>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <?php endif; ?>
-
-                                            <?php if ($imovel->vagas): ?>
-                                            <div class="col-4">
-                                                <div class="card mb-0">
-                                                    <div class="card-body text-center py-3">
-                                                        <div class="text-muted small mb-1">Vagas</div>
-                                                        <h3 class="mb-0"><?php echo $imovel->vagas; ?></h3>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <?php if (isset($imovel->link_imovel) && $imovel->link_imovel): ?>
-                                <div class="mt-4">
-                                    <a href="<?php echo $imovel->link_imovel; ?>" target="_blank" class="btn btn-outline-primary">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 15l6 -6" /><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464" /><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463" /></svg>
-                                        Ver Anúncio Completo
-                                    </a>
-                                </div>
-                                <?php endif; ?>
-
                             </div>
                         </div>
                     </div>
 
-                    <!-- Card de Ações -->
-                    <div class="col-12">
+                    <!-- Área -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="subheader">Área Privativa</div>
+                                <div class="d-flex align-items-baseline">
+                                    <div class="h1 mb-0 me-2"><?php echo number_format($imovel->area_privativa, 0, ',', '.'); ?></div>
+                                    <div class="me-2">m²</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php if ($imovel->quartos): ?>
+                    <!-- Quartos -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="subheader">Quartos</div>
+                                <div class="h1 mb-0"><?php echo $imovel->quartos; ?></div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($imovel->vagas): ?>
+                    <!-- Vagas -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="subheader">Vagas</div>
+                                <div class="h1 mb-0"><?php echo $imovel->vagas; ?></div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                
+                <!-- Corretor e Informações Adicionais -->
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
-                                <h3 class="card-title">Ações Rápidas</h3>
+                                <h3 class="card-title">Corretor Responsável</h3>
                             </div>
                             <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-lg-2 col-md-4 col-6">
+                                <div class="datagrid">
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">Nome</div>
+                                        <div class="datagrid-content"><?php echo $imovel->corretor_nome; ?></div>
+                                    </div>
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">Email</div>
+                                        <div class="datagrid-content"><?php echo $imovel->corretor_email; ?></div>
+                                    </div>
+                                    <?php if ($imovel->corretor_telefone): ?>
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">Telefone</div>
+                                        <div class="datagrid-content"><?php echo $imovel->corretor_telefone; ?></div>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Localização</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="datagrid">
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">Endereço</div>
+                                        <div class="datagrid-content"><?php echo $imovel->bairro; ?></div>
+                                    </div>
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">Cidade/Estado</div>
+                                        <div class="datagrid-content"><?php echo $imovel->cidade; ?>/<?php echo $imovel->estado; ?></div>
+                                    </div>
+                                    <?php if ($imovel->cep): ?>
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">CEP</div>
+                                        <div class="datagrid-content"><?php echo $imovel->cep; ?></div>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (isset($imovel->link_imovel) && $imovel->link_imovel): ?>
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">Link</div>
+                                        <div class="datagrid-content">
+                                            <a href="<?php echo $imovel->link_imovel; ?>" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                Ver Anúncio
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ações -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h3 class="card-title">Ações Rápidas</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-lg-2 col-md-4 col-6">
                                         <a href="<?php echo base_url('imoveis/toggle_status/' . $imovel->id); ?>" 
                                            class="btn btn-outline-<?php echo $imovel->ativo ? 'warning' : 'success'; ?> w-100"
                                            onclick="return confirm('Deseja <?php echo $imovel->ativo ? 'desativar' : 'ativar'; ?> este imóvel?')">
@@ -239,10 +255,9 @@ $this->load->view('templates/tabler/header');
                                             Deletar
                                         </a>
                                     </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
+                </div>
 
                 </div>
             </div>
@@ -251,5 +266,3 @@ $this->load->view('templates/tabler/header');
         <?php $this->load->view('templates/tabler/footer'); ?>
     </div>
 </div>
-
-<?php $this->load->view('templates/tabler/footer_scripts'); ?>

@@ -66,8 +66,8 @@ $route['login'] = 'auth/login';
 $route['register'] = 'auth/register';
 $route['cadastro'] = 'auth/register';
 $route['logout'] = 'auth/logout';
-$route['esqueci-senha'] = 'auth/forgot_password';
-$route['redefinir-senha/(:any)'] = 'auth/reset_password/$1';
+$route['esqueci-senha'] = 'password/forgot';
+$route['redefinir-senha/(:any)'] = 'password/reset/$1';
 
 // ========================================
 // Rotas do Dashboard

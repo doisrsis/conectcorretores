@@ -67,8 +67,8 @@ class Dashboard extends CI_Controller {
         $data['title'] = 'Dashboard - ConectCorretores';
         $data['page'] = 'dashboard';
 
-        // Carregar view
-        $this->load->view('dashboard/index', $data);
+        // Carregar view (Tabler)
+        $this->load->view('dashboard/index_tabler', $data);
     }
 
     /**

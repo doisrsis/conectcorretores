@@ -51,7 +51,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'assinaturas';
 
-        $this->load->view('admin/settings/assinaturas', $data);
+        $this->load->view('admin/settings/assinaturas_tabler', $data);
     }
 
     /**
@@ -68,7 +68,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'site';
 
-        $this->load->view('admin/settings/site', $data);
+        $this->load->view('admin/settings/site_tabler', $data);
     }
 
     /**
@@ -85,7 +85,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'email';
 
-        $this->load->view('admin/settings/email', $data);
+        $this->load->view('admin/settings/email_tabler', $data);
     }
 
     /**
@@ -102,7 +102,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'seguranca';
 
-        $this->load->view('admin/settings/seguranca', $data);
+        $this->load->view('admin/settings/seguranca_tabler', $data);
     }
 
     /**
@@ -119,7 +119,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'imoveis';
 
-        $this->load->view('admin/settings/imoveis', $data);
+        $this->load->view('admin/settings/imoveis_tabler', $data);
     }
 
     /**
@@ -136,7 +136,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'sistema';
 
-        $this->load->view('admin/settings/sistema', $data);
+        $this->load->view('admin/settings/sistema_tabler', $data);
     }
 
     /**
@@ -154,7 +154,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'cupons';
         
-        $this->load->view('admin/settings/cupons/index', $data);
+        $this->load->view('admin/settings/cupons/index_tabler', $data);
     }
     
     /**
@@ -237,7 +237,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'cupons';
         
-        $this->load->view('admin/settings/cupons/create', $data);
+        $this->load->view('admin/settings/cupons/create_tabler', $data);
     }
     
     /**
@@ -288,7 +288,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'cupons';
         
-        $this->load->view('admin/settings/cupons/edit', $data);
+        $this->load->view('admin/settings/cupons/edit_tabler', $data);
     }
     
     /**
@@ -310,7 +310,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'cupons';
         
-        $this->load->view('admin/settings/cupons/view', $data);
+        $this->load->view('admin/settings/cupons/view_tabler', $data);
     }
     
     /**
@@ -459,7 +459,7 @@ class Settings extends CI_Controller {
         $data['page'] = 'settings';
         $data['active_tab'] = 'todas';
 
-        $this->load->view('admin/settings/todas', $data);
+        $this->load->view('admin/settings/todas_tabler', $data);
     }
 
     /**

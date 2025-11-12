@@ -31,7 +31,7 @@ class Password extends CI_Controller {
         $data['title'] = 'Esqueci Minha Senha - ConectCorretores';
         $data['page'] = 'password_forgot';
 
-        $this->load->view('password/forgot', $data);
+        $this->load->view('password/forgot_tabler', $data);
     }
 
     /**

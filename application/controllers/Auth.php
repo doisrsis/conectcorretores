@@ -37,7 +37,7 @@ class Auth extends CI_Controller {
 
         // Mostrar formulário
         $data['title'] = 'Login - ConectCorretores';
-        $this->load->view('auth/login', $data);
+        $this->load->view('auth/login_tabler', $data);
     }
 
     /**
@@ -50,7 +50,7 @@ class Auth extends CI_Controller {
 
         if ($this->form_validation->run() === FALSE) {
             $data['title'] = 'Login - ConectCorretores';
-            $this->load->view('auth/login', $data);
+            $this->load->view('auth/login_tabler', $data);
             return;
         }
 
@@ -109,7 +109,7 @@ class Auth extends CI_Controller {
 
         // Mostrar formulário
         $data['title'] = 'Cadastro - ConectCorretores';
-        $this->load->view('auth/register', $data);
+        $this->load->view('auth/register_tabler', $data);
     }
 
     /**
@@ -128,7 +128,7 @@ class Auth extends CI_Controller {
 
         if ($this->form_validation->run() === FALSE) {
             $data['title'] = 'Cadastro - ConectCorretores';
-            $this->load->view('auth/register', $data);
+            $this->load->view('auth/register_tabler', $data);
             return;
         }
 

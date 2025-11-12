@@ -335,3 +335,13 @@
     background-color: var(--tblr-primary-darken);
     border-color: var(--tblr-primary-darken);
 }
+
+/* ========================================
+   TABELAS - COLUNA DE AÇÕES
+   ======================================== */
+.table .btn-list {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 1.2rem;
+    align-items: center;
+}
